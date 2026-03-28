@@ -35,6 +35,7 @@ export default function App() {
   >("all");
 
   const seenNotifIds = useRef<Set<string>>(new Set());
+  const notificationsRef = useRef<Notification[]>([]);
   const unacknowledgedCount = notifications.filter(
     (n) => !n.acknowledged,
   ).length;
@@ -63,7 +64,6 @@ export default function App() {
         (n) => !n.acknowledged && !seenNotifIds.current.has(n.id.toString()),
       );
       if (newNotifs.length > 0 && seenNotifIds.current.size > 0) {
-        // Only toast if we already had data (not on first load)
         for (const n of newNotifs) {
           toast(n.message, {
             description: `Order #${Number(n.orderId).toString().padStart(4, "0")}`,
@@ -71,7 +71,6 @@ export default function App() {
           });
         }
       }
-      // Mark all fetched unacknowledged as seen
       for (const n of fetchedNotifs.filter((n) => !n.acknowledged)) {
         seenNotifIds.current.add(n.id.toString());
       }
@@ -79,7 +78,9 @@ export default function App() {
       const sorted = fetchedNotifs
         .slice()
         .sort((a, b) => Number(b.timestamp - a.timestamp));
-      setNotifications(sorted.slice(0, 20));
+      const sliced = sorted.slice(0, 20);
+      setNotifications(sliced);
+      notificationsRef.current = sliced;
     } catch (_e) {
       // silently fail polls
     }
@@ -96,6 +97,13 @@ export default function App() {
     if (!actor) return;
     try {
       await actor.updateOrderStatus(orderId, status);
+      // Auto-acknowledge all notifications for this order so ringtone stops
+      const relatedNotifs = notificationsRef.current.filter(
+        (n) => !n.acknowledged && n.orderId === orderId,
+      );
+      await Promise.all(
+        relatedNotifs.map((n) => actor.acknowledgeNotification(n.id)),
+      );
       await fetchData();
       toast.success(
         `Order #${Number(orderId).toString().padStart(4, "0")} updated to ${status}`,

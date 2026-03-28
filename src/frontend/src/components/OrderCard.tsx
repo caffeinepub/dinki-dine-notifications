@@ -81,8 +81,7 @@ export function OrderCard({ order, onUpdateStatus, index }: OrderCardProps) {
             style={{ backgroundColor: vehicleColorHex }}
           />
           <span className="text-sm font-semibold text-din-text">
-            {order.vehicleInfo.color} {order.vehicleInfo.make}{" "}
-            {order.vehicleInfo.model}
+            {order.vehicleInfo.color} {order.vehicleInfo.make}
           </span>
           <span className="text-xs font-mono text-din-muted bg-din-surface-alt px-2 py-0.5 rounded border border-din-border">
             {order.vehicleInfo.licensePlate}
