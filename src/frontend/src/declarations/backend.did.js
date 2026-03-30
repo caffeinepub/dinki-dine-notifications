@@ -8,6 +8,11 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const OrderItem = IDL.Record({
+  'name' : IDL.Text,
+  'quantity' : IDL.Nat,
+  'price' : IDL.Nat,
+});
 export const OrderStatus = IDL.Variant({
   'preparing' : IDL.Null,
   'pending' : IDL.Null,
@@ -21,11 +26,6 @@ export const VehicleInfo = IDL.Record({
   'color' : IDL.Text,
 });
 export const Timestamp = IDL.Int;
-export const OrderItem = IDL.Record({
-  'name' : IDL.Text,
-  'quantity' : IDL.Nat,
-  'price' : IDL.Nat,
-});
 export const Order = IDL.Record({
   'id' : IDL.Nat,
   'status' : OrderStatus,
@@ -53,6 +53,11 @@ export const OrderInput = IDL.Record({
 export const idlService = IDL.Service({
   'acknowledgeAllNotifications' : IDL.Func([], [], []),
   'acknowledgeNotification' : IDL.Func([IDL.Nat], [], []),
+  'addItemsToOrder' : IDL.Func(
+      [IDL.Nat, IDL.Vec(OrderItem), IDL.Nat, IDL.Nat],
+      [],
+      [],
+    ),
   'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
   'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
   'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),
@@ -70,6 +75,11 @@ export const idlService = IDL.Service({
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const OrderItem = IDL.Record({
+    'name' : IDL.Text,
+    'quantity' : IDL.Nat,
+    'price' : IDL.Nat,
+  });
   const OrderStatus = IDL.Variant({
     'preparing' : IDL.Null,
     'pending' : IDL.Null,
@@ -83,11 +93,6 @@ export const idlFactory = ({ IDL }) => {
     'color' : IDL.Text,
   });
   const Timestamp = IDL.Int;
-  const OrderItem = IDL.Record({
-    'name' : IDL.Text,
-    'quantity' : IDL.Nat,
-    'price' : IDL.Nat,
-  });
   const Order = IDL.Record({
     'id' : IDL.Nat,
     'status' : OrderStatus,
@@ -115,6 +120,11 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     'acknowledgeAllNotifications' : IDL.Func([], [], []),
     'acknowledgeNotification' : IDL.Func([IDL.Nat], [], []),
+    'addItemsToOrder' : IDL.Func(
+        [IDL.Nat, IDL.Vec(OrderItem), IDL.Nat, IDL.Nat],
+        [],
+        [],
+      ),
     'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
     'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
     'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),

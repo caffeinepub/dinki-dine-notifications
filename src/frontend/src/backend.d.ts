@@ -48,9 +48,18 @@ export enum OrderStatus {
     fulfilled = "fulfilled",
     ready = "ready"
 }
+export interface MenuItem {
+    id: bigint;
+    name: string;
+    category: string;
+    price: bigint;
+    printerNumber: bigint;
+    available: boolean;
+}
 export interface backendInterface {
     acknowledgeAllNotifications(): Promise<void>;
     acknowledgeNotification(notificationId: bigint): Promise<void>;
+    addItemsToOrder(orderId: bigint, newItems: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
     getAllOrders(): Promise<Array<Order>>;
     getNotifications(): Promise<Array<Notification>>;
     getOrderById(id: bigint): Promise<Order>;
@@ -59,4 +68,10 @@ export interface backendInterface {
     getUnacknowledgedNotifications(): Promise<Array<Notification>>;
     placeOrder(order: OrderInput): Promise<bigint>;
     updateOrderStatus(orderId: bigint, status: OrderStatus): Promise<void>;
+    getMenuItems(): Promise<Array<MenuItem>>;
+    initMenu(): Promise<void>;
+    addMenuItem(name: string, category: string, price: bigint, printerNumber: bigint): Promise<bigint>;
+    updateMenuItem(id: bigint, name: string, category: string, price: bigint, printerNumber: bigint, available: boolean): Promise<void>;
+    deleteMenuItem(id: bigint): Promise<void>;
+    resetMenuToDefaults(): Promise<void>;
 }

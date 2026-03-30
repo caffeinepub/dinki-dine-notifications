@@ -52,6 +52,10 @@ export interface VehicleInfo {
 export interface _SERVICE {
   'acknowledgeAllNotifications' : ActorMethod<[], undefined>,
   'acknowledgeNotification' : ActorMethod<[bigint], undefined>,
+  'addItemsToOrder' : ActorMethod<
+    [bigint, Array<OrderItem>, bigint, bigint],
+    undefined
+  >,
   'getAllOrders' : ActorMethod<[], Array<Order>>,
   'getNotifications' : ActorMethod<[], Array<Notification>>,
   'getOrderById' : ActorMethod<[bigint], Order>,

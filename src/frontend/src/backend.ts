@@ -133,6 +133,7 @@ export enum OrderStatus {
 export interface backendInterface {
     acknowledgeAllNotifications(): Promise<void>;
     acknowledgeNotification(notificationId: bigint): Promise<void>;
+    addItemsToOrder(orderId: bigint, newItems: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
     getAllOrders(): Promise<Array<Order>>;
     getNotifications(): Promise<Array<Notification>>;
     getOrderById(id: bigint): Promise<Order>;
@@ -170,6 +171,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.acknowledgeNotification(arg0);
+            return result;
+        }
+    }
+    async addItemsToOrder(arg0: bigint, arg1: Array<OrderItem>, arg2: bigint, arg3: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addItemsToOrder(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addItemsToOrder(arg0, arg1, arg2, arg3);
             return result;
         }
     }

@@ -49,6 +49,13 @@
     --din-orange: 0.72 0.18 55;
     --din-green: 0.7 0.18 155;
     --din-red: 0.65 0.22 25;
+
+    /* Customer ordering tokens — warm food-app palette */
+    --cust-bg: 0.97 0.01 60;
+    --cust-text: 0.2 0.01 40;
+    --cust-muted: 0.55 0.02 50;
+    --cust-primary: 0.65 0.19 40;
+    --cust-primary-dark: 0.55 0.19 40;
   }
 
   .dark {
@@ -92,5 +99,10 @@
   body {
     @apply bg-background text-foreground;
     font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  /* Customer page resets dark mode forcing */
+  .cust-page {
+    color-scheme: light;
   }
 }

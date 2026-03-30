@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
   Bell,
@@ -8,28 +9,46 @@ import {
   CheckCheck,
   Clock,
   Plus,
+  Settings,
   ShoppingBag,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Notification, Order, OrderInput } from "./backend";
+import type { Notification, Order, OrderInput, OrderItem } from "./backend";
 import { OrderStatus } from "./backend";
+import { CustomerOrder } from "./components/CustomerOrder";
 import { KpiCard } from "./components/KpiCard";
+import { MenuAdmin } from "./components/MenuAdmin";
 import { NewOrderModal } from "./components/NewOrderModal";
 import { NotificationItem } from "./components/NotificationItem";
 import { OrderCard } from "./components/OrderCard";
 import { useActor } from "./hooks/useActor";
+import { useMenu } from "./hooks/useMenu";
 import { loadMutePref, saveMutePref, useSound } from "./hooks/useSound";
 
+const isCustomerMode =
+  new URLSearchParams(window.location.search).get("mode") === "customer";
+
 export default function App() {
+  // Customer self-ordering mode
+  if (isCustomerMode) {
+    return <CustomerOrder />;
+  }
+
+  return <StaffDashboard />;
+}
+
+function StaffDashboard() {
   const { actor } = useActor();
+  const { menuItems, reloadMenu } = useMenu();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isMuted, setIsMuted] = useState<boolean>(loadMutePref);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showMenuAdmin, setShowMenuAdmin] = useState(false);
   const [filter, setFilter] = useState<
     "all" | "pending" | "preparing" | "ready" | "fulfilled"
   >("all");
@@ -141,6 +160,25 @@ export default function App() {
     toast.success("Order placed successfully!");
   };
 
+  const handleAddItems = async (
+    orderId: bigint,
+    newItems: OrderItem[],
+    packingCharge: bigint,
+    deliveryCharge: bigint,
+  ) => {
+    if (!actor) throw new Error("Actor not ready");
+    await actor.addItemsToOrder(
+      orderId,
+      newItems,
+      packingCharge,
+      deliveryCharge,
+    );
+    await fetchData();
+    toast.success(
+      `Items added to Order #${Number(orderId).toString().padStart(4, "0")}`,
+    );
+  };
+
   const toggleMute = () => {
     setIsMuted((prev) => {
       const next = !prev;
@@ -174,6 +212,115 @@ export default function App() {
     { key: "fulfilled", label: "Fulfilled" },
   ] as const;
 
+  // Shared orders section content
+  const ordersSection = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-din-text">Live Orders</h2>
+        <div className="flex items-center gap-1 flex-wrap">
+          {FILTER_PILLS.map((pill) => (
+            <button
+              type="button"
+              key={pill.key}
+              data-ocid="orders.tab"
+              onClick={() => setFilter(pill.key)}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors border ${
+                filter === pill.key
+                  ? "bg-din-teal/20 border-din-teal/50 text-din-teal"
+                  : "border-din-border text-din-muted hover:text-din-text hover:border-din-muted"
+              }`}
+            >
+              {pill.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ScrollArea className="flex-1 pr-2">
+        {filteredOrders.length === 0 ? (
+          <div
+            data-ocid="orders.empty_state"
+            className="flex flex-col items-center justify-center h-48 text-din-muted"
+          >
+            <ShoppingBag className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No orders yet</p>
+            <p className="text-xs opacity-60">New orders will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-4">
+            {filteredOrders.map((order, i) => (
+              <OrderCard
+                key={order.id.toString()}
+                order={order}
+                onUpdateStatus={handleUpdateStatus}
+                onAddItems={handleAddItems}
+                index={i + 1}
+                menuItems={menuItems}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </>
+  );
+
+  // Shared notifications section content
+  const notificationsSection = (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-din-text">Order Notifications</h2>
+        {unacknowledgedCount > 0 && (
+          <Button
+            data-ocid="notifications.primary_button"
+            size="sm"
+            variant="outline"
+            onClick={handleAcknowledgeAll}
+            className="h-7 text-xs px-2 border-din-border text-din-muted hover:bg-din-surface-alt flex items-center gap-1"
+          >
+            <CheckCheck className="w-3 h-3" />
+            Ack All
+          </Button>
+        )}
+      </div>
+      <ScrollArea className="flex-1">
+        {notifications.length === 0 ? (
+          <div
+            data-ocid="notifications.empty_state"
+            className="flex flex-col items-center justify-center h-48 text-din-muted"
+          >
+            <Bell className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No notifications</p>
+            <p className="text-xs opacity-60">Alerts appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-2 pb-4">
+            {notifications.map((notif, i) => (
+              <NotificationItem
+                key={notif.id.toString()}
+                notification={notif}
+                onAcknowledge={handleAcknowledge}
+                index={i + 1}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </>
+  );
+
+  // If menu admin is open, render it full-screen
+  if (showMenuAdmin) {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <MenuAdmin
+          menuItems={menuItems}
+          onBack={() => setShowMenuAdmin(false)}
+          onReload={reloadMenu}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Toaster position="top-right" theme="dark" />
@@ -191,7 +338,7 @@ export default function App() {
                 Dinki Dine
               </span>
               <span className="text-[10px] text-din-muted leading-none">
-                Veg Drive-In
+                Drive-in &amp; Dine-in
               </span>
             </div>
           </div>
@@ -201,7 +348,7 @@ export default function App() {
             className="hidden md:flex items-center gap-1"
             aria-label="Main navigation"
           >
-            {["Dashboard", "Active Orders", "Menu", "Kitchen", "Reports"].map(
+            {["Dashboard", "Active Orders", "Kitchen", "Reports"].map(
               (item) => (
                 <button
                   type="button"
@@ -217,6 +364,16 @@ export default function App() {
                 </button>
               ),
             )}
+            {/* Menu admin button */}
+            <button
+              type="button"
+              data-ocid="nav.link"
+              onClick={() => setShowMenuAdmin(true)}
+              className="px-3 py-1.5 text-xs font-medium rounded transition-colors text-din-muted hover:text-din-text flex items-center gap-1"
+            >
+              <Settings className="w-3 h-3" />
+              Menu
+            </button>
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
@@ -261,6 +418,17 @@ export default function App() {
               )}
             </button>
 
+            {/* Mobile menu admin shortcut */}
+            <button
+              type="button"
+              data-ocid="nav.link"
+              onClick={() => setShowMenuAdmin(true)}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-din-surface-alt transition-colors"
+              title="Menu Admin"
+            >
+              <Settings className="w-4 h-4 text-din-muted" />
+            </button>
+
             {/* User */}
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-din-teal/20 border border-din-teal/40 flex items-center justify-center">
@@ -287,100 +455,45 @@ export default function App() {
 
       {/* Main */}
       <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 py-4">
-        <div className="flex gap-4 h-[calc(100vh-13rem)]">
+        {/* Mobile: tabs layout */}
+        <div className="md:hidden">
+          <Tabs defaultValue="orders">
+            <TabsList className="w-full mb-3 bg-din-surface-alt border border-din-border">
+              <TabsTrigger
+                value="orders"
+                data-ocid="orders.tab"
+                className="flex-1 text-xs data-[state=active]:bg-din-teal/20 data-[state=active]:text-din-teal"
+              >
+                Live Orders{pendingCount > 0 ? ` (${pendingCount})` : ""}
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                data-ocid="notifications.tab"
+                className="flex-1 text-xs data-[state=active]:bg-din-teal/20 data-[state=active]:text-din-teal"
+              >
+                Notifications
+                {unacknowledgedCount > 0 ? ` (${unacknowledgedCount})` : ""}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="orders" className="flex flex-col">
+              {ordersSection}
+            </TabsContent>
+            <TabsContent value="notifications" className="flex flex-col">
+              {notificationsSection}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Desktop: side-by-side panels */}
+        <div className="hidden md:flex gap-4 h-[calc(100vh-13rem)]">
           {/* Live Orders (70%) */}
           <section className="flex-[7] flex flex-col min-w-0">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-din-text">Live Orders</h2>
-              <div className="flex items-center gap-1">
-                {FILTER_PILLS.map((pill) => (
-                  <button
-                    type="button"
-                    key={pill.key}
-                    data-ocid="orders.tab"
-                    onClick={() => setFilter(pill.key)}
-                    className={`px-3 py-1 text-xs rounded-full font-medium transition-colors border ${
-                      filter === pill.key
-                        ? "bg-din-teal/20 border-din-teal/50 text-din-teal"
-                        : "border-din-border text-din-muted hover:text-din-text hover:border-din-muted"
-                    }`}
-                  >
-                    {pill.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1 pr-2">
-              {filteredOrders.length === 0 ? (
-                <div
-                  data-ocid="orders.empty_state"
-                  className="flex flex-col items-center justify-center h-48 text-din-muted"
-                >
-                  <ShoppingBag className="w-10 h-10 mb-3 opacity-30" />
-                  <p className="text-sm font-medium">No orders yet</p>
-                  <p className="text-xs opacity-60">
-                    New orders will appear here
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3 pb-4">
-                  {filteredOrders.map((order, i) => (
-                    <OrderCard
-                      key={order.id.toString()}
-                      order={order}
-                      onUpdateStatus={handleUpdateStatus}
-                      index={i + 1}
-                    />
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+            {ordersSection}
           </section>
 
           {/* Notifications Panel (30%) */}
           <aside className="flex-[3] flex flex-col min-w-0">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-din-text">
-                Order Notifications
-              </h2>
-              {unacknowledgedCount > 0 && (
-                <Button
-                  data-ocid="notifications.primary_button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAcknowledgeAll}
-                  className="h-7 text-xs px-2 border-din-border text-din-muted hover:bg-din-surface-alt flex items-center gap-1"
-                >
-                  <CheckCheck className="w-3 h-3" />
-                  Ack All
-                </Button>
-              )}
-            </div>
-
-            <ScrollArea className="flex-1">
-              {notifications.length === 0 ? (
-                <div
-                  data-ocid="notifications.empty_state"
-                  className="flex flex-col items-center justify-center h-48 text-din-muted"
-                >
-                  <Bell className="w-10 h-10 mb-3 opacity-30" />
-                  <p className="text-sm font-medium">No notifications</p>
-                  <p className="text-xs opacity-60">Alerts appear here</p>
-                </div>
-              ) : (
-                <div className="space-y-2 pb-4">
-                  {notifications.map((notif, i) => (
-                    <NotificationItem
-                      key={notif.id.toString()}
-                      notification={notif}
-                      onAcknowledge={handleAcknowledge}
-                      index={i + 1}
-                    />
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+            {notificationsSection}
           </aside>
         </div>
 
@@ -433,6 +546,9 @@ export default function App() {
         open={showNewOrderModal}
         onClose={() => setShowNewOrderModal(false)}
         onSubmit={handlePlaceOrder}
+        onAddToTab={handleAddItems}
+        existingOrders={orders}
+        backendMenuItems={menuItems}
       />
     </div>
   );

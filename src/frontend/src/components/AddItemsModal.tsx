@@ -9,13 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Clock } from "lucide-react";
+import { Clock, PlusCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Order, OrderInput, OrderItem } from "../backend";
-import { OrderStatus } from "../backend";
-import type { MenuItem as BackendMenuItem } from "../types/menu";
+import type { Order, OrderItem } from "../backend";
 
-// ── Time helpers ─────────────────────────────────────────────────
 function toMinutes(h: number, m: number) {
   return h * 60 + m;
 }
@@ -28,177 +25,186 @@ function inRange(start: [number, number], end: [number, number]) {
   return now >= toMinutes(...start) && now < toMinutes(...end);
 }
 
-// ── Menu schedule ─────────────────────────────────────────────────
 type TimeSlot = { start: [number, number]; end: [number, number] };
 
-interface LocalMenuItem {
+interface MenuItem {
   name: string;
   price: number;
   category: "Breakfast" | "North Indian" | "Chinese" | "Roti";
   slots: TimeSlot[];
 }
 
-const CATEGORY_SLOTS: Record<string, TimeSlot[]> = {
-  Breakfast: [{ start: [7, 0], end: [12, 0] }],
-  "North Indian": [{ start: [11, 30], end: [22, 30] }],
-  Chinese: [{ start: [11, 30], end: [22, 30] }],
-  Roti: [
-    { start: [11, 30], end: [15, 30] },
-    { start: [19, 0], end: [22, 30] },
-  ],
-};
-
-const ALL_MENU_ITEMS: LocalMenuItem[] = [
+const ALL_MENU_ITEMS: MenuItem[] = [
   {
     name: "Masala Dosa",
     price: 120,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Idli Sambar",
     price: 90,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Medu Vada",
     price: 80,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Upma",
     price: 70,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Aloo Paratha",
     price: 100,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Poha",
     price: 60,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Mango Lassi",
     price: 80,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Filter Coffee",
     price: 50,
     category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
     name: "Paneer Tikka",
     price: 250,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Dal Makhani",
     price: 180,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Veg Biryani",
     price: 200,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Shahi Paneer",
     price: 220,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Matar Paneer",
     price: 200,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Chole Bhature",
     price: 160,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Gulab Jamun",
     price: 60,
     category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Spring Rolls",
     price: 130,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Veg Fried Rice",
     price: 150,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Hakka Noodles",
     price: 140,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Manchurian",
     price: 160,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Chilli Paneer",
     price: 180,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Veg Soup",
     price: 90,
     category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    slots: [{ start: [11, 30], end: [22, 30] }],
   },
   {
     name: "Butter Roti",
     price: 30,
     category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    slots: [
+      { start: [11, 30], end: [15, 30] },
+      { start: [19, 0], end: [22, 30] },
+    ],
   },
-  { name: "Phulka", price: 25, category: "Roti", slots: CATEGORY_SLOTS.Roti },
+  {
+    name: "Phulka",
+    price: 25,
+    category: "Roti",
+    slots: [
+      { start: [11, 30], end: [15, 30] },
+      { start: [19, 0], end: [22, 30] },
+    ],
+  },
   {
     name: "Tandoori Roti",
     price: 40,
     category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    slots: [
+      { start: [11, 30], end: [15, 30] },
+      { start: [19, 0], end: [22, 30] },
+    ],
   },
   {
     name: "Butter Naan",
     price: 60,
     category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    slots: [
+      { start: [11, 30], end: [15, 30] },
+      { start: [19, 0], end: [22, 30] },
+    ],
   },
   {
     name: "Laccha Paratha",
     price: 70,
     category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    slots: [
+      { start: [11, 30], end: [15, 30] },
+      { start: [19, 0], end: [22, 30] },
+    ],
   },
 ];
 
@@ -216,49 +222,30 @@ const CATEGORY_SCHEDULE: Record<string, string> = {
   Roti: "11:30–15:30 & 19:00–22:30",
 };
 
-function isAvailableNow(item: LocalMenuItem): boolean {
+const SPECIAL_ITEMS = ["Packing Charges", "Delivery Charge"];
+
+function isAvailableNow(item: MenuItem): boolean {
   return item.slots.some((s) => inRange(s.start, s.end));
 }
 
-// Convert backend MenuItems to LocalMenuItems (time slots are fixed per category)
-function backendToLocal(items: BackendMenuItem[]): LocalMenuItem[] {
-  return items
-    .filter((i) => i.available)
-    .map((i) => ({
-      name: i.name,
-      price: Number(i.price),
-      category: i.category as LocalMenuItem["category"],
-      slots: CATEGORY_SLOTS[i.category] ?? CATEGORY_SLOTS["North Indian"],
-    }));
-}
-
-// ── Component ─────────────────────────────────────────────────
-interface NewOrderModalProps {
+interface AddItemsModalProps {
   open: boolean;
+  order: Order | null;
   onClose: () => void;
-  onSubmit: (order: OrderInput) => Promise<void>;
-  onAddToTab: (
+  onSubmit: (
     orderId: bigint,
     newItems: OrderItem[],
     packingCharge: bigint,
     deliveryCharge: bigint,
   ) => Promise<void>;
-  existingOrders: Order[];
-  backendMenuItems?: BackendMenuItem[];
 }
 
-export function NewOrderModal({
+export function AddItemsModal({
   open,
+  order,
   onClose,
   onSubmit,
-  onAddToTab,
-  existingOrders,
-  backendMenuItems,
-}: NewOrderModalProps) {
-  const [make, setMake] = useState("");
-  const [color, setColor] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
-  const [mobile, setMobile] = useState("");
+}: AddItemsModalProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [packingCharge, setPackingCharge] = useState("");
   const [deliveryCharge, setDeliveryCharge] = useState("");
@@ -271,23 +258,25 @@ export function NewOrderModal({
     return () => clearInterval(id);
   }, []);
 
-  // Resolve menu source: backend items if available, else hardcoded fallback
-  const allItems: LocalMenuItem[] =
-    backendMenuItems && backendMenuItems.length > 0
-      ? backendToLocal(backendMenuItems)
-      : ALL_MENU_ITEMS;
+  // Pre-fill existing packing/delivery
+  useEffect(() => {
+    if (open && order) {
+      const existingPacking = order.items.find(
+        (i) => i.name === "Packing Charges",
+      );
+      const existingDelivery = order.items.find(
+        (i) => i.name === "Delivery Charge",
+      );
+      setPackingCharge(
+        existingPacking ? Number(existingPacking.price).toString() : "",
+      );
+      setDeliveryCharge(
+        existingDelivery ? Number(existingDelivery.price).toString() : "",
+      );
+    }
+  }, [open, order]);
 
-  // Detect existing open tab for this license plate
-  const existingTab = licensePlate.trim()
-    ? existingOrders.find(
-        (o) =>
-          o.status !== OrderStatus.fulfilled &&
-          o.vehicleInfo.licensePlate.trim().toLowerCase() ===
-            licensePlate.trim().toLowerCase(),
-      )
-    : undefined;
-
-  const availableItems = allItems.filter(isAvailableNow);
+  const availableItems = ALL_MENU_ITEMS.filter(isAvailableNow);
   const categories = Array.from(new Set(availableItems.map((i) => i.category)));
 
   const toggleItem = (name: string) => {
@@ -299,11 +288,7 @@ export function NewOrderModal({
     });
   };
 
-  const resetForm = () => {
-    setMake("");
-    setColor("");
-    setLicensePlate("");
-    setMobile("");
+  const reset = () => {
     setSelectedItems(new Set());
     setPackingCharge("");
     setDeliveryCharge("");
@@ -311,107 +296,40 @@ export function NewOrderModal({
   };
 
   const handleClose = () => {
-    resetForm();
+    reset();
     onClose();
   };
 
   const handleSubmit = async () => {
+    if (!order) return;
     setError("");
-
-    if (existingTab) {
-      // Add to existing tab
-      if (selectedItems.size === 0) {
-        setError("Please select at least one item.");
-        return;
-      }
-      const newItems: OrderItem[] = availableItems
-        .filter((m) => selectedItems.has(m.name))
-        .map((m) => ({ name: m.name, quantity: 1n, price: BigInt(m.price) }));
-      const packingAmt = Number.parseFloat(packingCharge);
-      const deliveryAmt = Number.parseFloat(deliveryCharge);
-      const packingBigInt =
-        !Number.isNaN(packingAmt) && packingAmt > 0
-          ? BigInt(Math.round(packingAmt))
-          : 0n;
-      const deliveryBigInt =
-        !Number.isNaN(deliveryAmt) && deliveryAmt > 0
-          ? BigInt(Math.round(deliveryAmt))
-          : 0n;
-      setIsSubmitting(true);
-      try {
-        await onAddToTab(
-          existingTab.id,
-          newItems,
-          packingBigInt,
-          deliveryBigInt,
-        );
-        resetForm();
-        onClose();
-      } catch (_e) {
-        setError("Failed to add items to tab. Please try again.");
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
-    }
-
-    // New order
-    if (
-      !make.trim() ||
-      !color.trim() ||
-      !licensePlate.trim() ||
-      !mobile.trim()
-    ) {
-      setError("Please fill in all vehicle and contact fields.");
-      return;
-    }
     if (selectedItems.size === 0) {
-      setError("Please select at least one item.");
+      setError("Please select at least one item to add.");
       return;
     }
 
-    const items = availableItems
+    const newItems: OrderItem[] = availableItems
       .filter((m) => selectedItems.has(m.name))
       .map((m) => ({ name: m.name, quantity: 1n, price: BigInt(m.price) }));
 
     const packingAmt = Number.parseFloat(packingCharge);
-    if (!Number.isNaN(packingAmt) && packingAmt > 0) {
-      items.push({
-        name: "Packing Charges",
-        quantity: 1n,
-        price: BigInt(Math.round(packingAmt)),
-      });
-    }
     const deliveryAmt = Number.parseFloat(deliveryCharge);
-    if (!Number.isNaN(deliveryAmt) && deliveryAmt > 0) {
-      items.push({
-        name: "Delivery Charge",
-        quantity: 1n,
-        price: BigInt(Math.round(deliveryAmt)),
-      });
-    }
-
-    const order: OrderInput = {
-      id: 0n,
-      status: OrderStatus.pending,
-      vehicleInfo: {
-        make: make.trim(),
-        model: "",
-        color: color.trim(),
-        licensePlate: licensePlate.trim(),
-      },
-      customerMobile: mobile.trim(),
-      timestamp: BigInt(Date.now()) * 1_000_000n,
-      items,
-    };
+    const packingBigInt =
+      !Number.isNaN(packingAmt) && packingAmt > 0
+        ? BigInt(Math.round(packingAmt))
+        : 0n;
+    const deliveryBigInt =
+      !Number.isNaN(deliveryAmt) && deliveryAmt > 0
+        ? BigInt(Math.round(deliveryAmt))
+        : 0n;
 
     setIsSubmitting(true);
     try {
-      await onSubmit(order);
-      resetForm();
+      await onSubmit(order.id, newItems, packingBigInt, deliveryBigInt);
+      reset();
       onClose();
     } catch (_e) {
-      setError("Failed to place order. Please try again.");
+      setError("Failed to add items. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -423,15 +341,35 @@ export function NewOrderModal({
     hour12: false,
   });
 
+  // Running bill preview with new selections
+  const existingRegular =
+    order?.items.filter((i) => !SPECIAL_ITEMS.includes(i.name)) ?? [];
+  const newSelected = availableItems.filter((m) => selectedItems.has(m.name));
+  const existingTotal = existingRegular.reduce(
+    (s, i) => s + Number(i.price) * Number(i.quantity),
+    0,
+  );
+  const newTotal = newSelected.reduce((s, m) => s + m.price, 0);
+  const combinedItemsTotal = existingTotal + newTotal;
+  const sgst = combinedItemsTotal * 0.025;
+  const cgst = combinedItemsTotal * 0.025;
+  const packingNum = Number.parseFloat(packingCharge) || 0;
+  const deliveryNum = Number.parseFloat(deliveryCharge) || 0;
+  const grandTotal =
+    combinedItemsTotal + sgst + cgst + packingNum + deliveryNum;
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent
-        data-ocid="new_order.dialog"
+        data-ocid="add_items.dialog"
         className="bg-din-surface border-din-border text-din-text max-w-lg max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle className="text-din-text flex items-center justify-between">
-            New Customer Order
+            <span className="flex items-center gap-2">
+              <PlusCircle className="w-4 h-4 text-din-teal" />
+              Add Items to Tab
+            </span>
             <span className="flex items-center gap-1 text-xs font-normal text-din-muted">
               <Clock className="w-3.5 h-3.5" />
               {timeStr}
@@ -439,81 +377,18 @@ export function NewOrderModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Existing tab banner */}
-          {existingTab && (
-            <div
-              data-ocid="new_order.panel"
-              className="flex items-start gap-2 bg-din-orange/10 border border-din-orange/40 rounded px-3 py-2 text-xs text-din-orange"
-            >
-              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-              <span>
-                ⚡ Car <strong>{existingTab.vehicleInfo.licensePlate}</strong>{" "}
-                already has an open tab. New items will be added to the existing
-                order.
-              </span>
-            </div>
-          )}
-
-          {/* Vehicle Info */}
-          {!existingTab && (
-            <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-din-teal uppercase tracking-wider">
-                Vehicle Details
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-din-muted">Make</Label>
-                  <Input
-                    data-ocid="new_order.input"
-                    value={make}
-                    onChange={(e) => setMake(e.target.value)}
-                    placeholder="e.g. Maruti Swift"
-                    className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-din-muted">Color</Label>
-                  <Input
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    placeholder="e.g. Red"
-                    className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* License Plate — always shown */}
-          <div>
-            <Label className="text-xs text-din-muted">License Plate</Label>
-            <Input
-              value={licensePlate}
-              onChange={(e) => setLicensePlate(e.target.value)}
-              placeholder="KA01AB1234"
-              className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-            />
+        {order && (
+          <div className="bg-din-teal/10 border border-din-teal/30 rounded px-3 py-2 text-xs text-din-teal">
+            Tab: {order.vehicleInfo.color} {order.vehicleInfo.make} ·{" "}
+            {order.vehicleInfo.licensePlate}
           </div>
+        )}
 
-          {/* Mobile — only for new orders */}
-          {!existingTab && (
-            <div>
-              <Label className="text-xs text-din-muted">Customer Mobile</Label>
-              <Input
-                data-ocid="new_order.search_input"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-              />
-            </div>
-          )}
-
+        <div className="space-y-4 py-2">
           {/* Menu Items */}
           <div>
             <h3 className="text-xs font-semibold text-din-teal uppercase tracking-wider mb-3">
-              Menu Items
+              Add Menu Items
             </h3>
             {availableItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-din-muted">
@@ -534,7 +409,7 @@ export function NewOrderModal({
                   return (
                     <div key={cat}>
                       <div
-                        className={`flex items-center justify-between px-2 py-1 rounded mb-2 border text-xs font-semibold ${CATEGORY_COLORS[cat] ?? ""}`}
+                        className={`flex items-center justify-between px-2 py-1 rounded mb-2 border text-xs font-semibold ${CATEGORY_COLORS[cat]}`}
                       >
                         <span>{cat}</span>
                         <span className="font-normal opacity-75">
@@ -586,7 +461,7 @@ export function NewOrderModal({
                   Packing Charges (₹)
                 </Label>
                 <Input
-                  data-ocid="new_order.input"
+                  data-ocid="add_items.input"
                   type="number"
                   min="0"
                   value={packingCharge}
@@ -600,7 +475,7 @@ export function NewOrderModal({
                   Delivery Charge (₹)
                 </Label>
                 <Input
-                  data-ocid="new_order.input"
+                  data-ocid="add_items.input"
                   type="number"
                   min="0"
                   value={deliveryCharge}
@@ -612,9 +487,46 @@ export function NewOrderModal({
             </div>
           </div>
 
+          {/* Running Bill Preview */}
+          <div className="border border-din-border/60 rounded p-3 bg-din-surface-alt">
+            <p className="text-[10px] font-semibold text-din-teal uppercase tracking-wider mb-2">
+              Running Bill
+            </p>
+            <div className="space-y-0.5">
+              <div className="flex justify-between text-[11px] text-din-muted">
+                <span>Items Total</span>
+                <span>₹{combinedItemsTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-din-muted">
+                <span>SGST (2.5%)</span>
+                <span>₹{sgst.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-din-muted">
+                <span>CGST (2.5%)</span>
+                <span>₹{cgst.toFixed(2)}</span>
+              </div>
+              {packingNum > 0 && (
+                <div className="flex justify-between text-[11px] text-din-muted">
+                  <span>Packing</span>
+                  <span>₹{packingNum.toFixed(2)}</span>
+                </div>
+              )}
+              {deliveryNum > 0 && (
+                <div className="flex justify-between text-[11px] text-din-muted">
+                  <span>Delivery</span>
+                  <span>₹{deliveryNum.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-din-border/60 mt-1.5 pt-1.5 flex justify-between text-[12px] font-semibold">
+              <span className="text-din-text">Grand Total</span>
+              <span className="text-din-teal">₹{grandTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
           {error && (
             <p
-              data-ocid="new_order.error_state"
+              data-ocid="add_items.error_state"
               className="text-xs text-din-red"
             >
               {error}
@@ -624,7 +536,7 @@ export function NewOrderModal({
 
         <DialogFooter className="gap-2">
           <Button
-            data-ocid="new_order.cancel_button"
+            data-ocid="add_items.cancel_button"
             variant="outline"
             onClick={handleClose}
             className="border-din-border text-din-muted hover:bg-din-surface-alt"
@@ -632,18 +544,12 @@ export function NewOrderModal({
             Cancel
           </Button>
           <Button
-            data-ocid="new_order.submit_button"
+            data-ocid="add_items.submit_button"
             onClick={handleSubmit}
-            disabled={isSubmitting || availableItems.length === 0}
-            className="bg-din-orange hover:bg-din-orange/80 text-white font-semibold"
+            disabled={isSubmitting || selectedItems.size === 0}
+            className="bg-din-teal hover:bg-din-teal/80 text-white font-semibold"
           >
-            {isSubmitting
-              ? existingTab
-                ? "Adding..."
-                : "Placing..."
-              : existingTab
-                ? "Add to Tab"
-                : "Place Order"}
+            {isSubmitting ? "Adding..." : "Add to Tab"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -78,6 +78,13 @@ export default {
           green: "oklch(var(--din-green))",
           red: "oklch(var(--din-red))",
         },
+        cust: {
+          bg: "oklch(var(--cust-bg))",
+          text: "oklch(var(--cust-text))",
+          muted: "oklch(var(--cust-muted))",
+          primary: "oklch(var(--cust-primary))",
+          "primary-dark": "oklch(var(--cust-primary-dark))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
