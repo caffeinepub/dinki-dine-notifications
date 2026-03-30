@@ -65,21 +65,6 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; className: string }> =
     },
   };
 
-const VEHICLE_COLORS: Record<string, string> = {
-  red: "#ef4444",
-  blue: "#3b82f6",
-  green: "#22c55e",
-  white: "#f8fafc",
-  black: "#1f2937",
-  silver: "#94a3b8",
-  gray: "#6b7280",
-  yellow: "#eab308",
-  orange: "#f97316",
-  purple: "#a855f7",
-  maroon: "#9f1239",
-  brown: "#92400e",
-};
-
 const SPECIAL_ITEMS = ["Packing Charges", "Delivery Charge"];
 
 export function OrderCard({
@@ -93,8 +78,6 @@ export function OrderCard({
   const [showIssueBill, setShowIssueBill] = useState(false);
 
   const statusCfg = STATUS_CONFIG[order.status];
-  const vehicleColorHex =
-    VEHICLE_COLORS[order.vehicleInfo.color.toLowerCase()] ?? "#94a3b8";
 
   const regularItems = order.items.filter(
     (i) => !SPECIAL_ITEMS.includes(i.name),
@@ -182,8 +165,7 @@ export function OrderCard({
   KOT No: ${kotNo}
   Date: ${dateStr}   Time: ${timeStr}
 -------------------------------------
-  Car: ${order.vehicleInfo.color} ${order.vehicleInfo.make}
-  Plate: ${order.vehicleInfo.licensePlate}
+  Table: ${order.vehicleInfo.licensePlate}
 -------------------------------------
   ITEMS:
 ${itemLines}
@@ -207,14 +189,10 @@ ${itemLines}
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full flex-shrink-0 border border-white/20"
-              style={{ backgroundColor: vehicleColorHex }}
-            />
-            <span className="text-sm font-semibold text-din-text">
-              {order.vehicleInfo.color} {order.vehicleInfo.make}
+            <span className="text-xs font-semibold text-din-teal uppercase tracking-wider">
+              Table
             </span>
-            <span className="text-xs font-mono text-din-muted bg-din-surface-alt px-2 py-0.5 rounded border border-din-border">
+            <span className="text-sm font-bold font-mono text-din-text bg-din-surface-alt px-2 py-0.5 rounded border border-din-border">
               {order.vehicleInfo.licensePlate}
             </span>
           </div>

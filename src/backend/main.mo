@@ -358,4 +358,22 @@ actor {
   public query ({ caller }) func getUnacknowledgedNotifications() : async [Notification] {
     notifications.values().toArray().filter(func(n) { not n.acknowledged });
   };
+
+  // ── New Clear Functions ────────────────────────────────────────
+
+  public shared func clearAllOrders() : async () {
+    orders.clear();
+    nextOrderId := 1;
+  };
+
+  public shared func clearAllNotifications() : async () {
+    notifications.clear();
+    nextNotificationId := 1;
+  };
+
+  public shared func clearAllData() : async () {
+    await clearAllOrders();
+    await clearAllNotifications();
+    await resetMenuToDefaults();
+  };
 };

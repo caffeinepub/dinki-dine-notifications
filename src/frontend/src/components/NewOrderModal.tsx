@@ -9,11 +9,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Clock } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  ShoppingBag,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Order, OrderInput, OrderItem } from "../backend";
 import { OrderStatus } from "../backend";
 import type { MenuItem as BackendMenuItem } from "../types/menu";
+import { TablePicker } from "./TablePicker";
 
 // ── Time helpers ─────────────────────────────────────────────────
 function toMinutes(h: number, m: number) {
@@ -34,26 +40,56 @@ type TimeSlot = { start: [number, number]; end: [number, number] };
 interface LocalMenuItem {
   name: string;
   price: number;
-  category: "Breakfast" | "North Indian" | "Chinese" | "Roti";
+  category:
+    | "Hot n Hot"
+    | "Dosa"
+    | "Breakfast"
+    | "Chaat"
+    | "Ice cream novelties"
+    | "Ice cream cups n packs"
+    | "Juice n Shakes"
+    | "Soup"
+    | "Starter"
+    | "Roti (Bread)"
+    | "Main course"
+    | "Rice n Noodles"
+    | "Softdrinks"
+    | "Grill n spice";
   slots: TimeSlot[];
 }
 
 const CATEGORY_SLOTS: Record<string, TimeSlot[]> = {
+  "Hot n Hot": [{ start: [9, 0], end: [23, 0] }],
+  Dosa: [{ start: [9, 0], end: [23, 0] }],
   Breakfast: [{ start: [7, 0], end: [12, 0] }],
-  "North Indian": [{ start: [11, 30], end: [22, 30] }],
-  Chinese: [{ start: [11, 30], end: [22, 30] }],
-  Roti: [
+  Chaat: [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream novelties": [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream cups n packs": [{ start: [9, 0], end: [23, 0] }],
+  "Juice n Shakes": [{ start: [9, 0], end: [23, 0] }],
+  Soup: [{ start: [9, 0], end: [23, 0] }],
+  Starter: [{ start: [9, 0], end: [23, 0] }],
+  "Roti (Bread)": [
     { start: [11, 30], end: [15, 30] },
     { start: [19, 0], end: [22, 30] },
   ],
+  "Main course": [{ start: [9, 0], end: [23, 0] }],
+  "Rice n Noodles": [{ start: [9, 0], end: [23, 0] }],
+  Softdrinks: [{ start: [9, 0], end: [23, 0] }],
+  "Grill n spice": [{ start: [9, 0], end: [23, 0] }],
 };
 
 const ALL_MENU_ITEMS: LocalMenuItem[] = [
   {
+    name: "Pongal",
+    price: 80,
+    category: "Hot n Hot",
+    slots: CATEGORY_SLOTS["Hot n Hot"],
+  },
+  {
     name: "Masala Dosa",
     price: 120,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    category: "Dosa",
+    slots: CATEGORY_SLOTS.Dosa,
   },
   {
     name: "Idli Sambar",
@@ -62,165 +98,111 @@ const ALL_MENU_ITEMS: LocalMenuItem[] = [
     slots: CATEGORY_SLOTS.Breakfast,
   },
   {
-    name: "Medu Vada",
-    price: 80,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
-  },
-  {
-    name: "Upma",
-    price: 70,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
-  },
-  {
-    name: "Aloo Paratha",
-    price: 100,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
-  },
-  {
-    name: "Poha",
+    name: "Pani Puri",
     price: 60,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    category: "Chaat",
+    slots: CATEGORY_SLOTS.Chaat,
   },
   {
-    name: "Mango Lassi",
-    price: 80,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
-  },
-  {
-    name: "Filter Coffee",
+    name: "Choco Bar",
     price: 50,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
+    category: "Ice cream novelties",
+    slots: CATEGORY_SLOTS["Ice cream novelties"],
   },
   {
-    name: "Paneer Tikka",
-    price: 250,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Dal Makhani",
-    price: 180,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Veg Biryani",
-    price: 200,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Shahi Paneer",
-    price: 220,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Matar Paneer",
-    price: 200,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Chole Bhature",
-    price: 160,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
-  },
-  {
-    name: "Gulab Jamun",
+    name: "Vanilla Cup",
     price: 60,
-    category: "North Indian",
-    slots: CATEGORY_SLOTS["North Indian"],
+    category: "Ice cream cups n packs",
+    slots: CATEGORY_SLOTS["Ice cream cups n packs"],
   },
   {
-    name: "Spring Rolls",
-    price: 130,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    name: "Fresh Lime Juice",
+    price: 70,
+    category: "Juice n Shakes",
+    slots: CATEGORY_SLOTS["Juice n Shakes"],
   },
   {
-    name: "Veg Fried Rice",
-    price: 150,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    name: "Tomato Soup",
+    price: 80,
+    category: "Soup",
+    slots: CATEGORY_SLOTS.Soup,
   },
   {
-    name: "Hakka Noodles",
-    price: 140,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
-  },
-  {
-    name: "Manchurian",
-    price: 160,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
-  },
-  {
-    name: "Chilli Paneer",
-    price: 180,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
-  },
-  {
-    name: "Veg Soup",
-    price: 90,
-    category: "Chinese",
-    slots: CATEGORY_SLOTS.Chinese,
+    name: "Veg Spring Roll",
+    price: 120,
+    category: "Starter",
+    slots: CATEGORY_SLOTS.Starter,
   },
   {
     name: "Butter Roti",
-    price: 30,
-    category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    price: 35,
+    category: "Roti (Bread)",
+    slots: CATEGORY_SLOTS["Roti (Bread)"],
   },
-  { name: "Phulka", price: 25, category: "Roti", slots: CATEGORY_SLOTS.Roti },
   {
-    name: "Tandoori Roti",
+    name: "Paneer Butter Masala",
+    price: 220,
+    category: "Main course",
+    slots: CATEGORY_SLOTS["Main course"],
+  },
+  {
+    name: "Veg Fried Rice",
+    price: 160,
+    category: "Rice n Noodles",
+    slots: CATEGORY_SLOTS["Rice n Noodles"],
+  },
+  {
+    name: "Coca Cola",
     price: 40,
-    category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    category: "Softdrinks",
+    slots: CATEGORY_SLOTS.Softdrinks,
   },
   {
-    name: "Butter Naan",
-    price: 60,
-    category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
-  },
-  {
-    name: "Laccha Paratha",
-    price: 70,
-    category: "Roti",
-    slots: CATEGORY_SLOTS.Roti,
+    name: "Paneer Tikka",
+    price: 260,
+    category: "Grill n spice",
+    slots: CATEGORY_SLOTS["Grill n spice"],
   },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
+  "Hot n Hot": "text-red-400 border-red-500/30 bg-red-500/10",
+  Dosa: "text-orange-400 border-orange-500/30 bg-orange-500/10",
   Breakfast: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",
-  "North Indian": "text-orange-400 border-orange-500/30 bg-orange-500/10",
-  Chinese: "text-red-400 border-red-500/30 bg-red-500/10",
-  Roti: "text-amber-300 border-amber-400/30 bg-amber-400/10",
+  Chaat: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+  "Ice cream novelties": "text-pink-400 border-pink-500/30 bg-pink-500/10",
+  "Ice cream cups n packs": "text-rose-400 border-rose-500/30 bg-rose-500/10",
+  "Juice n Shakes": "text-lime-400 border-lime-500/30 bg-lime-500/10",
+  Soup: "text-teal-400 border-teal-500/30 bg-teal-500/10",
+  Starter: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+  "Roti (Bread)": "text-amber-300 border-amber-400/30 bg-amber-400/10",
+  "Main course": "text-green-400 border-green-500/30 bg-green-500/10",
+  "Rice n Noodles": "text-indigo-400 border-indigo-500/30 bg-indigo-500/10",
+  Softdrinks: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+  "Grill n spice": "text-purple-400 border-purple-500/30 bg-purple-500/10",
 };
 
 const CATEGORY_SCHEDULE: Record<string, string> = {
+  "Hot n Hot": "09:00 – 23:00",
+  Dosa: "09:00 – 23:00",
   Breakfast: "07:00 – 12:00",
-  "North Indian": "11:30 – 22:30",
-  Chinese: "11:30 – 22:30",
-  Roti: "11:30–15:30 & 19:00–22:30",
+  Chaat: "09:00 – 23:00",
+  "Ice cream novelties": "09:00 – 23:00",
+  "Ice cream cups n packs": "09:00 – 23:00",
+  "Juice n Shakes": "09:00 – 23:00",
+  Soup: "09:00 – 23:00",
+  Starter: "09:00 – 23:00",
+  "Roti (Bread)": "11:30–15:30 & 19:00–22:30",
+  "Main course": "09:00 – 23:00",
+  "Rice n Noodles": "09:00 – 23:00",
+  Softdrinks: "09:00 – 23:00",
+  "Grill n spice": "09:00 – 23:00",
 };
 
 function isAvailableNow(item: LocalMenuItem): boolean {
   return item.slots.some((s) => inRange(s.start, s.end));
 }
 
-// Convert backend MenuItems to LocalMenuItems (time slots are fixed per category)
 function backendToLocal(items: BackendMenuItem[]): LocalMenuItem[] {
   return items
     .filter((i) => i.available)
@@ -228,7 +210,7 @@ function backendToLocal(items: BackendMenuItem[]): LocalMenuItem[] {
       name: i.name,
       price: Number(i.price),
       category: i.category as LocalMenuItem["category"],
-      slots: CATEGORY_SLOTS[i.category] ?? CATEGORY_SLOTS["North Indian"],
+      slots: CATEGORY_SLOTS[i.category] ?? CATEGORY_SLOTS["Main course"],
     }));
 }
 
@@ -245,6 +227,7 @@ interface NewOrderModalProps {
   ) => Promise<void>;
   existingOrders: Order[];
   backendMenuItems?: BackendMenuItem[];
+  defaultTakeAway?: boolean;
 }
 
 export function NewOrderModal({
@@ -254,11 +237,14 @@ export function NewOrderModal({
   onAddToTab,
   existingOrders,
   backendMenuItems,
+  defaultTakeAway = false,
 }: NewOrderModalProps) {
-  const [make, setMake] = useState("");
-  const [color, setColor] = useState("");
+  const [orderType, setOrderType] = useState<"dineIn" | "takeAway">(
+    defaultTakeAway ? "takeAway" : "dineIn",
+  );
   const [licensePlate, setLicensePlate] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [packingCharge, setPackingCharge] = useState("");
   const [deliveryCharge, setDeliveryCharge] = useState("");
@@ -266,24 +252,35 @@ export function NewOrderModal({
   const [error, setError] = useState("");
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Sync with defaultTakeAway prop when modal opens
+  useEffect(() => {
+    if (open) {
+      setOrderType(defaultTakeAway ? "takeAway" : "dineIn");
+    }
+  }, [open, defaultTakeAway]);
+
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  // Resolve menu source: backend items if available, else hardcoded fallback
   const allItems: LocalMenuItem[] =
     backendMenuItems && backendMenuItems.length > 0
       ? backendToLocal(backendMenuItems)
       : ALL_MENU_ITEMS;
 
-  // Detect existing open tab for this license plate
-  const existingTab = licensePlate.trim()
+  // Compute effective license plate
+  const effectiveLicensePlate =
+    orderType === "takeAway"
+      ? `TAKEAWAY-${customerPhone.trim() || customerName.trim() || "WALK-IN"}`
+      : licensePlate;
+
+  const existingTab = effectiveLicensePlate.trim()
     ? existingOrders.find(
         (o) =>
           o.status !== OrderStatus.fulfilled &&
           o.vehicleInfo.licensePlate.trim().toLowerCase() ===
-            licensePlate.trim().toLowerCase(),
+            effectiveLicensePlate.trim().toLowerCase(),
       )
     : undefined;
 
@@ -300,10 +297,9 @@ export function NewOrderModal({
   };
 
   const resetForm = () => {
-    setMake("");
-    setColor("");
     setLicensePlate("");
-    setMobile("");
+    setCustomerName("");
+    setCustomerPhone("");
     setSelectedItems(new Set());
     setPackingCharge("");
     setDeliveryCharge("");
@@ -318,8 +314,16 @@ export function NewOrderModal({
   const handleSubmit = async () => {
     setError("");
 
+    if (
+      orderType === "takeAway" &&
+      !customerName.trim() &&
+      !customerPhone.trim()
+    ) {
+      setError("Please enter customer name or phone.");
+      return;
+    }
+
     if (existingTab) {
-      // Add to existing tab
       if (selectedItems.size === 0) {
         setError("Please select at least one item.");
         return;
@@ -356,13 +360,8 @@ export function NewOrderModal({
     }
 
     // New order
-    if (
-      !make.trim() ||
-      !color.trim() ||
-      !licensePlate.trim() ||
-      !mobile.trim()
-    ) {
-      setError("Please fill in all vehicle and contact fields.");
+    if (orderType === "dineIn" && !licensePlate.trim()) {
+      setError("Please select a table.");
       return;
     }
     if (selectedItems.size === 0) {
@@ -395,12 +394,12 @@ export function NewOrderModal({
       id: 0n,
       status: OrderStatus.pending,
       vehicleInfo: {
-        make: make.trim(),
+        make: "",
         model: "",
-        color: color.trim(),
-        licensePlate: licensePlate.trim(),
+        color: "",
+        licensePlate: effectiveLicensePlate.trim(),
       },
-      customerMobile: mobile.trim(),
+      customerMobile: customerPhone.trim(),
       timestamp: BigInt(Date.now()) * 1_000_000n,
       items,
     };
@@ -440,6 +439,36 @@ export function NewOrderModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Order type toggle */}
+          <div className="flex rounded-lg overflow-hidden border border-din-border">
+            <button
+              type="button"
+              data-ocid="new_order.toggle"
+              onClick={() => setOrderType("dineIn")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors ${
+                orderType === "dineIn"
+                  ? "bg-din-teal/20 text-din-teal"
+                  : "bg-din-surface-alt text-din-muted hover:text-din-text"
+              }`}
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              Dine In
+            </button>
+            <button
+              type="button"
+              data-ocid="new_order.toggle"
+              onClick={() => setOrderType("takeAway")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors border-l border-din-border ${
+                orderType === "takeAway"
+                  ? "bg-din-orange/20 text-din-orange"
+                  : "bg-din-surface-alt text-din-muted hover:text-din-text"
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              Take Away
+            </button>
+          </div>
+
           {/* Existing tab banner */}
           {existingTab && (
             <div
@@ -448,65 +477,67 @@ export function NewOrderModal({
             >
               <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <span>
-                ⚡ Car <strong>{existingTab.vehicleInfo.licensePlate}</strong>{" "}
+                ⚡ Table <strong>{existingTab.vehicleInfo.licensePlate}</strong>{" "}
                 already has an open tab. New items will be added to the existing
                 order.
               </span>
             </div>
           )}
 
-          {/* Vehicle Info */}
-          {!existingTab && (
-            <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-din-teal uppercase tracking-wider">
-                Vehicle Details
+          {/* Table Picker (Dine In) or Customer Info (Take Away) */}
+          {orderType === "dineIn" ? (
+            <div>
+              <h3 className="text-xs font-semibold text-din-teal uppercase tracking-wider mb-3">
+                Select Table
+              </h3>
+              <TablePicker
+                selectedTable={licensePlate}
+                onSelect={setLicensePlate}
+                occupiedTables={existingOrders
+                  .filter((o) => o.status !== OrderStatus.fulfilled)
+                  .map((o) => o.vehicleInfo.licensePlate)}
+              />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-din-orange uppercase tracking-wider">
+                Customer Details
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-din-muted">Make</Label>
+                  <Label className="text-xs text-din-muted">
+                    Customer Name
+                  </Label>
                   <Input
                     data-ocid="new_order.input"
-                    value={make}
-                    onChange={(e) => setMake(e.target.value)}
-                    placeholder="e.g. Maruti Swift"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Customer name"
                     className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-din-muted">Color</Label>
+                  <Label className="text-xs text-din-muted">
+                    Phone (optional)
+                  </Label>
                   <Input
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    placeholder="e.g. Red"
+                    data-ocid="new_order.input"
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="9876543210"
                     className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
                   />
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* License Plate — always shown */}
-          <div>
-            <Label className="text-xs text-din-muted">License Plate</Label>
-            <Input
-              value={licensePlate}
-              onChange={(e) => setLicensePlate(e.target.value)}
-              placeholder="KA01AB1234"
-              className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-            />
-          </div>
-
-          {/* Mobile — only for new orders */}
-          {!existingTab && (
-            <div>
-              <Label className="text-xs text-din-muted">Customer Mobile</Label>
-              <Input
-                data-ocid="new_order.search_input"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
-              />
+              {(customerName || customerPhone) && (
+                <p className="text-[10px] text-din-muted">
+                  Order ID:{" "}
+                  <span className="font-mono text-din-orange">
+                    TAKEAWAY-{customerPhone.trim() || customerName.trim()}
+                  </span>
+                </p>
+              )}
             </div>
           )}
 
@@ -635,7 +666,11 @@ export function NewOrderModal({
             data-ocid="new_order.submit_button"
             onClick={handleSubmit}
             disabled={isSubmitting || availableItems.length === 0}
-            className="bg-din-orange hover:bg-din-orange/80 text-white font-semibold"
+            className={`text-white font-semibold ${
+              orderType === "takeAway"
+                ? "bg-din-orange hover:bg-din-orange/80"
+                : "bg-din-teal hover:bg-din-teal/80"
+            }`}
           >
             {isSubmitting
               ? existingTab

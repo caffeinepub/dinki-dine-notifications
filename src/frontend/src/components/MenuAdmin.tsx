@@ -43,10 +43,26 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import type { backendInterface } from "../backend";
 import { useActor } from "../hooks/useActor";
-import type { MenuActor, MenuItem } from "../types/menu";
+import type { MenuItem } from "../types/menu";
 
-const CATEGORIES = ["Breakfast", "North Indian", "Chinese", "Roti"] as const;
+const CATEGORIES = [
+  "Hot n Hot",
+  "Dosa",
+  "Breakfast",
+  "Chaat",
+  "Ice cream novelties",
+  "Ice cream cups n packs",
+  "Juice n Shakes",
+  "Soup",
+  "Starter",
+  "Roti (Bread)",
+  "Main course",
+  "Rice n Noodles",
+  "Softdrinks",
+  "Grill n spice",
+] as const;
 const PIN_KEY = "dinki_admin_pin_ok";
 const DEFAULT_PIN = "1234";
 
@@ -212,7 +228,7 @@ function AddItemForm({
         ) : (
           <Plus className="w-3 h-3 mr-1" />
         )}
-        Add Item
+        Save
       </Button>
     </div>
   );
@@ -310,7 +326,6 @@ function EditableRow({
 // ── Main MenuAdmin ─────────────────────────────────────────────
 export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
   const { actor } = useActor();
-  const menuActor = actor as unknown as MenuActor;
   const [unlocked, setUnlocked] = useState(
     () => localStorage.getItem(PIN_KEY) === "1",
   );
@@ -319,14 +334,12 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
   const [resetting, setResetting] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  if (!unlocked) {
-    return <PinGate onUnlock={() => setUnlocked(true)} />;
-  }
+  const backendActor = actor as unknown as backendInterface;
 
   const handleToggleAvailable = async (item: MenuItem) => {
     if (!actor) return;
     try {
-      await menuActor.updateMenuItem(
+      await backendActor.updateMenuItem(
         item.id,
         item.name,
         item.category,
@@ -338,7 +351,8 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
       toast.success(
         `${item.name} marked ${!item.available ? "available" : "out of stock"}`,
       );
-    } catch (_e) {
+    } catch (e) {
+      console.error(e);
       toast.error("Failed to update item");
     }
   };
@@ -349,9 +363,12 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
     price: bigint,
     printer: bigint,
   ) => {
-    if (!actor) return;
+    if (!actor) {
+      toast.error("Not connected to backend. Please refresh the page.");
+      return;
+    }
     try {
-      await menuActor.updateMenuItem(
+      await backendActor.updateMenuItem(
         item.id,
         name,
         item.category,
@@ -362,19 +379,9 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
       setEditingId(null);
       await onReload();
       toast.success("Item updated");
-    } catch (_e) {
+    } catch (e) {
+      console.error(e);
       toast.error("Failed to save item");
-    }
-  };
-
-  const handleDelete = async (item: MenuItem) => {
-    if (!actor) return;
-    try {
-      await menuActor.deleteMenuItem(item.id);
-      await onReload();
-      toast.success(`${item.name} deleted`);
-    } catch (_e) {
-      toast.error("Failed to delete item");
     }
   };
 
@@ -384,20 +391,41 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
     price: bigint,
     printer: bigint,
   ) => {
+    if (!actor) {
+      toast.error("Not connected to backend. Please refresh the page.");
+      return;
+    }
+    try {
+      await backendActor.addMenuItem(name, category, price, printer);
+      await onReload();
+      toast.success(`${name} added to ${category}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to add item. Please try again.");
+    }
+  };
+
+  const handleDelete = async (item: MenuItem) => {
     if (!actor) return;
-    await menuActor.addMenuItem(name, category, price, printer);
-    await onReload();
-    toast.success(`${name} added to ${category}`);
+    try {
+      await backendActor.deleteMenuItem(item.id);
+      await onReload();
+      toast.success(`${item.name} deleted`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete item");
+    }
   };
 
   const handleResetToDefaults = async () => {
     if (!actor) return;
     setResetting(true);
     try {
-      await menuActor.resetMenuToDefaults();
+      await backendActor.resetMenuToDefaults();
       await onReload();
       toast.success("Menu reset to defaults");
-    } catch (_e) {
+    } catch (e) {
+      console.error(e);
       toast.error("Reset failed");
     } finally {
       setResetting(false);
@@ -431,11 +459,9 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
-      // skip header
       const dataLines = lines.slice(1);
       let count = 0;
       for (const line of dataLines) {
-        // handle quoted CSV
         const cols =
           line
             .match(/(?:"([^"]*)"|([^,]*))/g)
@@ -452,7 +478,7 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
           Number.isNaN(printer)
         )
           continue;
-        await menuActor.addMenuItem(
+        await backendActor.addMenuItem(
           name,
           category,
           BigInt(Math.round(price)),
@@ -464,13 +490,18 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
       toast.success(
         `Imported ${count} item${count !== 1 ? "s" : ""} successfully`,
       );
-    } catch (_e) {
+    } catch (e) {
+      console.error(e);
       toast.error("CSV import failed. Check the format.");
     } finally {
       setCsvImporting(false);
       if (csvInputRef.current) csvInputRef.current.value = "";
     }
   };
+
+  if (!unlocked) {
+    return <PinGate onUnlock={() => setUnlocked(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -495,7 +526,6 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* CSV Import */}
           <input
             ref={csvInputRef}
             type="file"
@@ -519,7 +549,6 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
             Import CSV
           </Button>
 
-          {/* CSV Export */}
           <Button
             data-ocid="menu_admin.secondary_button"
             size="sm"
@@ -531,7 +560,6 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
             Export CSV
           </Button>
 
-          {/* Reset */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -588,12 +616,14 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
         <code className="text-din-teal">
           Name,Category,Price,PrinterNumber,Available
         </code>
-        &nbsp;— Category must be one of: Breakfast, North Indian, Chinese, Roti
+        &nbsp;— Category must be one of: Hot n Hot, Dosa, Breakfast, Chaat, Ice
+        cream novelties, Ice cream cups n packs, Juice n Shakes, Soup, Starter,
+        Roti (Bread), Main course, Rice n Noodles, Softdrinks, Grill n spice
       </div>
 
       {/* Category Tabs */}
       <div className="flex-1 px-4 py-4">
-        <Tabs defaultValue="Breakfast">
+        <Tabs defaultValue="Hot n Hot">
           <TabsList className="bg-din-surface-alt border border-din-border mb-4">
             {CATEGORIES.map((cat) => {
               const count = menuItems.filter((i) => i.category === cat).length;

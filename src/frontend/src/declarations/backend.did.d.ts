@@ -10,6 +10,14 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface MenuItem {
+  'id' : bigint,
+  'name' : string,
+  'available' : boolean,
+  'category' : string,
+  'printerNumber' : bigint,
+  'price' : bigint,
+}
 export interface Notification {
   'id' : bigint,
   'orderId' : bigint,
@@ -56,13 +64,25 @@ export interface _SERVICE {
     [bigint, Array<OrderItem>, bigint, bigint],
     undefined
   >,
+  'addMenuItem' : ActorMethod<[string, string, bigint, bigint], bigint>,
+  'clearAllData' : ActorMethod<[], undefined>,
+  'clearAllNotifications' : ActorMethod<[], undefined>,
+  'clearAllOrders' : ActorMethod<[], undefined>,
+  'deleteMenuItem' : ActorMethod<[bigint], undefined>,
   'getAllOrders' : ActorMethod<[], Array<Order>>,
+  'getMenuItems' : ActorMethod<[], Array<MenuItem>>,
   'getNotifications' : ActorMethod<[], Array<Notification>>,
   'getOrderById' : ActorMethod<[bigint], Order>,
   'getPendingOrders' : ActorMethod<[], Array<Order>>,
   'getUnacknowledgedCount' : ActorMethod<[], bigint>,
   'getUnacknowledgedNotifications' : ActorMethod<[], Array<Notification>>,
+  'initMenu' : ActorMethod<[], undefined>,
   'placeOrder' : ActorMethod<[OrderInput], bigint>,
+  'resetMenuToDefaults' : ActorMethod<[], undefined>,
+  'updateMenuItem' : ActorMethod<
+    [bigint, string, string, bigint, bigint, boolean],
+    undefined
+  >,
   'updateOrderStatus' : ActorMethod<[bigint, OrderStatus], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

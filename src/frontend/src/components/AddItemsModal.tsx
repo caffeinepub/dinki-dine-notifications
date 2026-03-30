@@ -30,16 +30,36 @@ type TimeSlot = { start: [number, number]; end: [number, number] };
 interface MenuItem {
   name: string;
   price: number;
-  category: "Breakfast" | "North Indian" | "Chinese" | "Roti";
+  category:
+    | "Hot n Hot"
+    | "Dosa"
+    | "Breakfast"
+    | "Chaat"
+    | "Ice cream novelties"
+    | "Ice cream cups n packs"
+    | "Juice n Shakes"
+    | "Soup"
+    | "Starter"
+    | "Roti (Bread)"
+    | "Main course"
+    | "Rice n Noodles"
+    | "Softdrinks"
+    | "Grill n spice";
   slots: TimeSlot[];
 }
 
 const ALL_MENU_ITEMS: MenuItem[] = [
   {
+    name: "Pongal",
+    price: 80,
+    category: "Hot n Hot",
+    slots: [{ start: [9, 0], end: [23, 0] }],
+  },
+  {
     name: "Masala Dosa",
     price: 120,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
+    category: "Dosa",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
     name: "Idli Sambar",
@@ -48,178 +68,108 @@ const ALL_MENU_ITEMS: MenuItem[] = [
     slots: [{ start: [7, 0], end: [12, 0] }],
   },
   {
-    name: "Medu Vada",
-    price: 80,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
-  },
-  {
-    name: "Upma",
-    price: 70,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
-  },
-  {
-    name: "Aloo Paratha",
-    price: 100,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
-  },
-  {
-    name: "Poha",
+    name: "Pani Puri",
     price: 60,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
+    category: "Chaat",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Mango Lassi",
-    price: 80,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
-  },
-  {
-    name: "Filter Coffee",
+    name: "Choco Bar",
     price: 50,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
+    category: "Ice cream novelties",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Paneer Tikka",
-    price: 250,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Dal Makhani",
-    price: 180,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Veg Biryani",
-    price: 200,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Shahi Paneer",
-    price: 220,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Matar Paneer",
-    price: 200,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Chole Bhature",
-    price: 160,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Gulab Jamun",
+    name: "Vanilla Cup",
     price: 60,
-    category: "North Indian",
-    slots: [{ start: [11, 30], end: [22, 30] }],
+    category: "Ice cream cups n packs",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Spring Rolls",
-    price: 130,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
+    name: "Fresh Lime Juice",
+    price: 70,
+    category: "Juice n Shakes",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Veg Fried Rice",
-    price: 150,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
+    name: "Tomato Soup",
+    price: 80,
+    category: "Soup",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Hakka Noodles",
-    price: 140,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Manchurian",
-    price: 160,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Chilli Paneer",
-    price: 180,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
-  },
-  {
-    name: "Veg Soup",
-    price: 90,
-    category: "Chinese",
-    slots: [{ start: [11, 30], end: [22, 30] }],
+    name: "Veg Spring Roll",
+    price: 120,
+    category: "Starter",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
     name: "Butter Roti",
-    price: 30,
-    category: "Roti",
+    price: 35,
+    category: "Roti (Bread)",
     slots: [
       { start: [11, 30], end: [15, 30] },
       { start: [19, 0], end: [22, 30] },
     ],
   },
   {
-    name: "Phulka",
-    price: 25,
-    category: "Roti",
-    slots: [
-      { start: [11, 30], end: [15, 30] },
-      { start: [19, 0], end: [22, 30] },
-    ],
+    name: "Paneer Butter Masala",
+    price: 220,
+    category: "Main course",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Tandoori Roti",
+    name: "Veg Fried Rice",
+    price: 160,
+    category: "Rice n Noodles",
+    slots: [{ start: [9, 0], end: [23, 0] }],
+  },
+  {
+    name: "Coca Cola",
     price: 40,
-    category: "Roti",
-    slots: [
-      { start: [11, 30], end: [15, 30] },
-      { start: [19, 0], end: [22, 30] },
-    ],
+    category: "Softdrinks",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
   {
-    name: "Butter Naan",
-    price: 60,
-    category: "Roti",
-    slots: [
-      { start: [11, 30], end: [15, 30] },
-      { start: [19, 0], end: [22, 30] },
-    ],
-  },
-  {
-    name: "Laccha Paratha",
-    price: 70,
-    category: "Roti",
-    slots: [
-      { start: [11, 30], end: [15, 30] },
-      { start: [19, 0], end: [22, 30] },
-    ],
+    name: "Paneer Tikka",
+    price: 260,
+    category: "Grill n spice",
+    slots: [{ start: [9, 0], end: [23, 0] }],
   },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
+  "Hot n Hot": "text-red-400 border-red-500/30 bg-red-500/10",
+  Dosa: "text-orange-400 border-orange-500/30 bg-orange-500/10",
   Breakfast: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",
-  "North Indian": "text-orange-400 border-orange-500/30 bg-orange-500/10",
-  Chinese: "text-red-400 border-red-500/30 bg-red-500/10",
-  Roti: "text-amber-300 border-amber-400/30 bg-amber-400/10",
+  Chaat: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+  "Ice cream novelties": "text-pink-400 border-pink-500/30 bg-pink-500/10",
+  "Ice cream cups n packs": "text-rose-400 border-rose-500/30 bg-rose-500/10",
+  "Juice n Shakes": "text-lime-400 border-lime-500/30 bg-lime-500/10",
+  Soup: "text-teal-400 border-teal-500/30 bg-teal-500/10",
+  Starter: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+  "Roti (Bread)": "text-amber-300 border-amber-400/30 bg-amber-400/10",
+  "Main course": "text-green-400 border-green-500/30 bg-green-500/10",
+  "Rice n Noodles": "text-indigo-400 border-indigo-500/30 bg-indigo-500/10",
+  Softdrinks: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+  "Grill n spice": "text-purple-400 border-purple-500/30 bg-purple-500/10",
 };
 
 const CATEGORY_SCHEDULE: Record<string, string> = {
+  "Hot n Hot": "09:00 – 23:00",
+  Dosa: "09:00 – 23:00",
   Breakfast: "07:00 – 12:00",
-  "North Indian": "11:30 – 22:30",
-  Chinese: "11:30 – 22:30",
-  Roti: "11:30–15:30 & 19:00–22:30",
+  Chaat: "09:00 – 23:00",
+  "Ice cream novelties": "09:00 – 23:00",
+  "Ice cream cups n packs": "09:00 – 23:00",
+  "Juice n Shakes": "09:00 – 23:00",
+  Soup: "09:00 – 23:00",
+  Starter: "09:00 – 23:00",
+  "Roti (Bread)": "11:30–15:30 & 19:00–22:30",
+  "Main course": "09:00 – 23:00",
+  "Rice n Noodles": "09:00 – 23:00",
+  Softdrinks: "09:00 – 23:00",
+  "Grill n spice": "09:00 – 23:00",
 };
 
 const SPECIAL_ITEMS = ["Packing Charges", "Delivery Charge"];

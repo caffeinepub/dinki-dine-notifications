@@ -8,22 +8,36 @@ import {
   Car,
   CheckCheck,
   Clock,
+  LayoutGrid,
+  List,
+  Menu,
   Plus,
-  Settings,
   ShoppingBag,
+  Smartphone,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Notification, Order, OrderInput, OrderItem } from "./backend";
 import { OrderStatus } from "./backend";
+import { AdminPinGate } from "./components/AdminPinGate";
 import { CustomerOrder } from "./components/CustomerOrder";
+import { DayEndReport } from "./components/DayEndReport";
+import { InvoiceListScreen } from "./components/InvoiceListScreen";
 import { KpiCard } from "./components/KpiCard";
 import { MenuAdmin } from "./components/MenuAdmin";
 import { NewOrderModal } from "./components/NewOrderModal";
 import { NotificationItem } from "./components/NotificationItem";
 import { OrderCard } from "./components/OrderCard";
+import { OrderListScreen } from "./components/OrderListScreen";
+import { SettingsPanel } from "./components/SettingsPanel";
+import type { AppView } from "./components/SideDrawer";
+import { SideDrawer } from "./components/SideDrawer";
+import { SummaryOfDay } from "./components/SummaryOfDay";
+import { TableGridView } from "./components/TableGridView";
+import { UserManagement, logActivity } from "./components/UserManagement";
 import { useActor } from "./hooks/useActor";
 import { useMenu } from "./hooks/useMenu";
 import { loadMutePref, saveMutePref, useSound } from "./hooks/useSound";
@@ -32,12 +46,72 @@ const isCustomerMode =
   new URLSearchParams(window.location.search).get("mode") === "customer";
 
 export default function App() {
-  // Customer self-ordering mode
   if (isCustomerMode) {
     return <CustomerOrder />;
   }
+  return (
+    <AdminPinGate>
+      <StaffDashboard />
+    </AdminPinGate>
+  );
+}
 
-  return <StaffDashboard />;
+function InstallBanner() {
+  const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  if (!deferredPrompt || dismissed) return null;
+
+  const handleInstall = async () => {
+    const prompt = deferredPrompt as BeforeInstallPromptEvent;
+    prompt.prompt();
+    await prompt.userChoice;
+    setDeferredPrompt(null);
+  };
+
+  return (
+    <div
+      data-ocid="pwa.panel"
+      className="bg-din-teal/10 border-b border-din-teal/30 px-4 py-2 flex items-center gap-3"
+    >
+      <Smartphone className="w-4 h-4 text-din-teal flex-shrink-0" />
+      <p className="text-xs text-din-teal flex-1">
+        📲 Install <strong>Dinki Pos</strong> on your phone for offline access
+      </p>
+      <Button
+        data-ocid="pwa.primary_button"
+        size="sm"
+        onClick={handleInstall}
+        className="h-6 text-[11px] px-2 bg-din-teal hover:bg-din-teal/80 text-white font-semibold flex-shrink-0"
+      >
+        Install
+      </Button>
+      <button
+        type="button"
+        data-ocid="pwa.close_button"
+        onClick={() => setDismissed(true)}
+        className="w-5 h-5 flex items-center justify-center text-din-teal/60 hover:text-din-teal transition-colors flex-shrink-0"
+        title="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// Extend Window type for beforeinstallprompt
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
 function StaffDashboard() {
@@ -48,10 +122,14 @@ function StaffDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isMuted, setIsMuted] = useState<boolean>(loadMutePref);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [newOrderDefaultTakeAway, setNewOrderDefaultTakeAway] = useState(false);
   const [showMenuAdmin, setShowMenuAdmin] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [filter, setFilter] = useState<
     "all" | "pending" | "preparing" | "ready" | "fulfilled"
   >("all");
+  const [viewMode, setViewMode] = useState<"list" | "table">("list");
 
   const seenNotifIds = useRef<Set<string>>(new Set());
   const notificationsRef = useRef<Notification[]>([]);
@@ -59,12 +137,10 @@ function StaffDashboard() {
     (n) => !n.acknowledged,
   ).length;
 
-  // Apply dark class to html
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
 
-  // Sound system
   useSound(unacknowledgedCount, isMuted);
 
   const fetchData = useCallback(async () => {
@@ -78,7 +154,6 @@ function StaffDashboard() {
         fetchedOrders.slice().sort((a, b) => Number(b.timestamp - a.timestamp)),
       );
 
-      // Detect new notifications
       const newNotifs = fetchedNotifs.filter(
         (n) => !n.acknowledged && !seenNotifIds.current.has(n.id.toString()),
       );
@@ -116,7 +191,6 @@ function StaffDashboard() {
     if (!actor) return;
     try {
       await actor.updateOrderStatus(orderId, status);
-      // Auto-acknowledge all notifications for this order so ringtone stops
       const relatedNotifs = notificationsRef.current.filter(
         (n) => !n.acknowledged && n.orderId === orderId,
       );
@@ -124,6 +198,16 @@ function StaffDashboard() {
         relatedNotifs.map((n) => actor.acknowledgeNotification(n.id)),
       );
       await fetchData();
+      // Log activity
+      const order = orders.find((o) => o.id === orderId);
+      logActivity({
+        table: order?.vehicleInfo.licensePlate ?? "",
+        action:
+          status === OrderStatus.fulfilled ? "Order paid" : "Order changed",
+        user: "admin@dinkidine.com",
+        timestamp: Date.now(),
+        orderId: Number(orderId).toString().padStart(4, "0"),
+      });
       toast.success(
         `Order #${Number(orderId).toString().padStart(4, "0")} updated to ${status}`,
       );
@@ -157,6 +241,14 @@ function StaffDashboard() {
     if (!actor) throw new Error("Actor not ready");
     await actor.placeOrder(order);
     await fetchData();
+    // Log activity
+    logActivity({
+      table: order.vehicleInfo.licensePlate,
+      action: "Order placed",
+      user: "admin@dinkidine.com",
+      timestamp: Date.now(),
+      orderId: "new",
+    });
     toast.success("Order placed successfully!");
   };
 
@@ -187,11 +279,17 @@ function StaffDashboard() {
     });
   };
 
+  const openNewOrder = (type?: "takeAway") => {
+    setNewOrderDefaultTakeAway(type === "takeAway");
+    setShowNewOrderModal(true);
+  };
+
   const filteredOrders = orders.filter(
     (o) => filter === "all" || o.status === filter,
   );
 
-  // KPI calculations
+  const activeOrders = orders.filter((o) => o.status !== OrderStatus.fulfilled);
+
   const pendingCount = orders.filter(
     (o) => o.status === OrderStatus.pending,
   ).length;
@@ -212,58 +310,104 @@ function StaffDashboard() {
     { key: "fulfilled", label: "Fulfilled" },
   ] as const;
 
-  // Shared orders section content
+  const viewToggle = (
+    <div className="flex items-center gap-0.5 ml-1 border border-din-border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        data-ocid="orders.toggle"
+        onClick={() => setViewMode("list")}
+        title="List view"
+        className={`w-7 h-7 flex items-center justify-center transition-colors ${
+          viewMode === "list"
+            ? "bg-din-teal/20 text-din-teal"
+            : "text-din-muted hover:text-din-text hover:bg-din-surface-alt"
+        }`}
+      >
+        <List className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        data-ocid="orders.toggle"
+        onClick={() => setViewMode("table")}
+        title="Table grid view"
+        className={`w-7 h-7 flex items-center justify-center transition-colors ${
+          viewMode === "table"
+            ? "bg-din-teal/20 text-din-teal"
+            : "text-din-muted hover:text-din-text hover:bg-din-surface-alt"
+        }`}
+      >
+        <LayoutGrid className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+
   const ordersSection = (
     <>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-din-text">Live Orders</h2>
-        <div className="flex items-center gap-1 flex-wrap">
-          {FILTER_PILLS.map((pill) => (
-            <button
-              type="button"
-              key={pill.key}
-              data-ocid="orders.tab"
-              onClick={() => setFilter(pill.key)}
-              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors border ${
-                filter === pill.key
-                  ? "bg-din-teal/20 border-din-teal/50 text-din-teal"
-                  : "border-din-border text-din-muted hover:text-din-text hover:border-din-muted"
-              }`}
-            >
-              {pill.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-din-text">Live Orders</h2>
+          {viewToggle}
         </div>
-      </div>
-      <ScrollArea className="flex-1 pr-2">
-        {filteredOrders.length === 0 ? (
-          <div
-            data-ocid="orders.empty_state"
-            className="flex flex-col items-center justify-center h-48 text-din-muted"
-          >
-            <ShoppingBag className="w-10 h-10 mb-3 opacity-30" />
-            <p className="text-sm font-medium">No orders yet</p>
-            <p className="text-xs opacity-60">New orders will appear here</p>
-          </div>
-        ) : (
-          <div className="space-y-3 pb-4">
-            {filteredOrders.map((order, i) => (
-              <OrderCard
-                key={order.id.toString()}
-                order={order}
-                onUpdateStatus={handleUpdateStatus}
-                onAddItems={handleAddItems}
-                index={i + 1}
-                menuItems={menuItems}
-              />
+        {viewMode === "list" && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {FILTER_PILLS.map((pill) => (
+              <button
+                type="button"
+                key={pill.key}
+                data-ocid="orders.tab"
+                onClick={() => setFilter(pill.key)}
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors border ${
+                  filter === pill.key
+                    ? "bg-din-teal/20 border-din-teal/50 text-din-teal"
+                    : "border-din-border text-din-muted hover:text-din-text hover:border-din-muted"
+                }`}
+              >
+                {pill.label}
+              </button>
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
+
+      {viewMode === "list" ? (
+        <ScrollArea className="flex-1 pr-2">
+          {filteredOrders.length === 0 ? (
+            <div
+              data-ocid="orders.empty_state"
+              className="flex flex-col items-center justify-center h-48 text-din-muted"
+            >
+              <ShoppingBag className="w-10 h-10 mb-3 opacity-30" />
+              <p className="text-sm font-medium">No orders yet</p>
+              <p className="text-xs opacity-60">New orders will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3 pb-4">
+              {filteredOrders.map((order, i) => (
+                <OrderCard
+                  key={order.id.toString()}
+                  order={order}
+                  onUpdateStatus={handleUpdateStatus}
+                  onAddItems={handleAddItems}
+                  index={i + 1}
+                  menuItems={menuItems}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <TableGridView
+            orders={activeOrders}
+            menuItems={menuItems}
+            onAddItems={handleAddItems}
+            onUpdateStatus={handleUpdateStatus}
+          />
+        </div>
+      )}
     </>
   );
 
-  // Shared notifications section content
   const notificationsSection = (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -307,7 +451,6 @@ function StaffDashboard() {
     </>
   );
 
-  // If menu admin is open, render it full-screen
   if (showMenuAdmin) {
     return (
       <>
@@ -321,21 +464,106 @@ function StaffDashboard() {
     );
   }
 
+  // Alternate views
+  if (currentView === "summary") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <SummaryOfDay
+          orders={orders}
+          onBack={() => setCurrentView("dashboard")}
+        />
+      </>
+    );
+  }
+  if (currentView === "orderList") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <OrderListScreen
+          orders={orders}
+          onBack={() => setCurrentView("dashboard")}
+        />
+      </>
+    );
+  }
+  if (currentView === "invoiceList") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <InvoiceListScreen
+          orders={orders}
+          onBack={() => setCurrentView("dashboard")}
+        />
+      </>
+    );
+  }
+  if (currentView === "userManagement") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <UserManagement onBack={() => setCurrentView("dashboard")} />
+      </>
+    );
+  }
+  if (currentView === "dayEndReport") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <DayEndReport
+          orders={orders}
+          onBack={() => setCurrentView("dashboard")}
+        />
+      </>
+    );
+  }
+
+  if (currentView === "settings") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <SettingsPanel onBack={() => setCurrentView("dashboard")} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Toaster position="top-right" theme="dark" />
 
+      <SideDrawer
+        open={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        currentView={currentView}
+        onNavigate={setCurrentView}
+        onOpenNewOrder={openNewOrder}
+        onOpenMenuAdmin={() => setShowMenuAdmin(true)}
+      />
+
+      {/* PWA Install Banner */}
+      <InstallBanner />
+
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-din-surface border-b border-din-border shadow-card">
+      <header className="sticky top-0 z-30 bg-din-surface border-b border-din-border shadow-card">
         <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center gap-4">
-          {/* Brand */}
+          {/* Hamburger */}
+          <button
+            type="button"
+            data-ocid="nav.button"
+            onClick={() => setShowDrawer(true)}
+            className="w-8 h-8 flex items-center justify-center rounded hover:bg-din-surface-alt text-din-muted hover:text-din-text transition-colors"
+            title="Open menu"
+          >
+            <Menu className="w-4.5 h-4.5" />
+          </button>
+
           <div className="flex items-center gap-2 mr-4">
             <div className="w-8 h-8 rounded-full bg-din-teal/20 border border-din-teal/40 flex items-center justify-center">
               <Car className="w-4 h-4 text-din-teal" />
             </div>
             <div>
               <span className="font-bold text-din-text text-sm leading-none block">
-                Dinki Dine
+                Dinki Pos
               </span>
               <span className="text-[10px] text-din-muted leading-none">
                 Drive-in &amp; Dine-in
@@ -343,41 +571,7 @@ function StaffDashboard() {
             </div>
           </div>
 
-          {/* Nav */}
-          <nav
-            className="hidden md:flex items-center gap-1"
-            aria-label="Main navigation"
-          >
-            {["Dashboard", "Active Orders", "Kitchen", "Reports"].map(
-              (item) => (
-                <button
-                  type="button"
-                  key={item}
-                  data-ocid="nav.link"
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                    item === "Dashboard"
-                      ? "text-din-teal border-b-2 border-din-teal"
-                      : "text-din-muted hover:text-din-text"
-                  }`}
-                >
-                  {item}
-                </button>
-              ),
-            )}
-            {/* Menu admin button */}
-            <button
-              type="button"
-              data-ocid="nav.link"
-              onClick={() => setShowMenuAdmin(true)}
-              className="px-3 py-1.5 text-xs font-medium rounded transition-colors text-din-muted hover:text-din-text flex items-center gap-1"
-            >
-              <Settings className="w-3 h-3" />
-              Menu
-            </button>
-          </nav>
-
           <div className="ml-auto flex items-center gap-3">
-            {/* Live pill */}
             <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-din-green/10 border border-din-green/30">
               <span className="w-1.5 h-1.5 rounded-full bg-din-green animate-pulse2" />
               <span className="text-[10px] font-semibold text-din-green">
@@ -385,7 +579,6 @@ function StaffDashboard() {
               </span>
             </span>
 
-            {/* Mute toggle */}
             <button
               type="button"
               data-ocid="settings.toggle"
@@ -401,16 +594,17 @@ function StaffDashboard() {
               ) : (
                 <Volume2 className="w-3.5 h-3.5" />
               )}
-              {isMuted ? "Muted" : "Sound On"}
+              <span className="hidden sm:inline">
+                {isMuted ? "Muted" : "Sound On"}
+              </span>
             </button>
 
-            {/* Bell */}
             <button
               type="button"
               data-ocid="notifications.button"
               className="relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-din-surface-alt transition-colors"
             >
-              <Bell className="w-4.5 h-4.5 text-din-muted" />
+              <Bell className="w-4 h-4 text-din-muted" />
               {unacknowledgedCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-din-red text-white text-[9px] font-bold flex items-center justify-center animate-pulse2">
                   {unacknowledgedCount > 9 ? "9+" : unacknowledgedCount}
@@ -418,18 +612,6 @@ function StaffDashboard() {
               )}
             </button>
 
-            {/* Mobile menu admin shortcut */}
-            <button
-              type="button"
-              data-ocid="nav.link"
-              onClick={() => setShowMenuAdmin(true)}
-              className="md:hidden w-8 h-8 flex items-center justify-center rounded-full hover:bg-din-surface-alt transition-colors"
-              title="Menu Admin"
-            >
-              <Settings className="w-4 h-4 text-din-muted" />
-            </button>
-
-            {/* User */}
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-din-teal/20 border border-din-teal/40 flex items-center justify-center">
                 <span className="text-[10px] font-bold text-din-teal">S</span>
@@ -439,12 +621,11 @@ function StaffDashboard() {
               </span>
             </div>
 
-            {/* New Order */}
             <Button
               data-ocid="orders.open_modal_button"
               size="sm"
-              onClick={() => setShowNewOrderModal(true)}
-              className="h-8 text-xs px-3 bg-din-orange hover:bg-din-orange/80 text-white font-semibold"
+              onClick={() => openNewOrder()}
+              className="hidden md:flex h-8 text-xs px-3 bg-din-orange hover:bg-din-orange/80 text-white font-semibold items-center"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               New Order
@@ -454,7 +635,7 @@ function StaffDashboard() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 py-4">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 py-4 pb-24 md:pb-4">
         {/* Mobile: tabs layout */}
         <div className="md:hidden">
           <Tabs defaultValue="orders">
@@ -486,12 +667,9 @@ function StaffDashboard() {
 
         {/* Desktop: side-by-side panels */}
         <div className="hidden md:flex gap-4 h-[calc(100vh-13rem)]">
-          {/* Live Orders (70%) */}
           <section className="flex-[7] flex flex-col min-w-0">
             {ordersSection}
           </section>
-
-          {/* Notifications Panel (30%) */}
           <aside className="flex-[3] flex flex-col min-w-0">
             {notificationsSection}
           </aside>
@@ -541,14 +719,30 @@ function StaffDashboard() {
         </p>
       </footer>
 
-      {/* New Order Modal */}
+      {/* Mobile FAB - New Order */}
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <button
+          type="button"
+          data-ocid="orders.open_modal_button_fab"
+          onClick={() => openNewOrder()}
+          className="flex items-center gap-2 bg-din-orange hover:bg-din-orange/80 active:scale-95 text-white font-bold px-6 py-3 rounded-full shadow-lg shadow-din-orange/40 transition-all text-sm"
+        >
+          <Plus className="w-4 h-4" />
+          New Order
+        </button>
+      </div>
+
       <NewOrderModal
         open={showNewOrderModal}
-        onClose={() => setShowNewOrderModal(false)}
+        onClose={() => {
+          setShowNewOrderModal(false);
+          setNewOrderDefaultTakeAway(false);
+        }}
         onSubmit={handlePlaceOrder}
         onAddToTab={handleAddItems}
         existingOrders={orders}
         backendMenuItems={menuItems}
+        defaultTakeAway={newOrderDefaultTakeAway}
       />
     </div>
   );

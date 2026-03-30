@@ -34,6 +34,14 @@ export const Order = IDL.Record({
   'timestamp' : Timestamp,
   'items' : IDL.Vec(OrderItem),
 });
+export const MenuItem = IDL.Record({
+  'id' : IDL.Nat,
+  'name' : IDL.Text,
+  'available' : IDL.Bool,
+  'category' : IDL.Text,
+  'printerNumber' : IDL.Nat,
+  'price' : IDL.Nat,
+});
 export const Notification = IDL.Record({
   'id' : IDL.Nat,
   'orderId' : IDL.Nat,
@@ -58,7 +66,17 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'addMenuItem' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Nat, IDL.Nat],
+      [IDL.Nat],
+      [],
+    ),
+  'clearAllData' : IDL.Func([], [], []),
+  'clearAllNotifications' : IDL.Func([], [], []),
+  'clearAllOrders' : IDL.Func([], [], []),
+  'deleteMenuItem' : IDL.Func([IDL.Nat], [], []),
   'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+  'getMenuItems' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
   'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
   'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),
   'getPendingOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
@@ -68,7 +86,14 @@ export const idlService = IDL.Service({
       [IDL.Vec(Notification)],
       ['query'],
     ),
+  'initMenu' : IDL.Func([], [], []),
   'placeOrder' : IDL.Func([OrderInput], [IDL.Nat], []),
+  'resetMenuToDefaults' : IDL.Func([], [], []),
+  'updateMenuItem' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool],
+      [],
+      [],
+    ),
   'updateOrderStatus' : IDL.Func([IDL.Nat, OrderStatus], [], []),
 });
 
@@ -101,6 +126,14 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : Timestamp,
     'items' : IDL.Vec(OrderItem),
   });
+  const MenuItem = IDL.Record({
+    'id' : IDL.Nat,
+    'name' : IDL.Text,
+    'available' : IDL.Bool,
+    'category' : IDL.Text,
+    'printerNumber' : IDL.Nat,
+    'price' : IDL.Nat,
+  });
   const Notification = IDL.Record({
     'id' : IDL.Nat,
     'orderId' : IDL.Nat,
@@ -125,7 +158,17 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'addMenuItem' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Nat, IDL.Nat],
+        [IDL.Nat],
+        [],
+      ),
+    'clearAllData' : IDL.Func([], [], []),
+    'clearAllNotifications' : IDL.Func([], [], []),
+    'clearAllOrders' : IDL.Func([], [], []),
+    'deleteMenuItem' : IDL.Func([IDL.Nat], [], []),
     'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+    'getMenuItems' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
     'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
     'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),
     'getPendingOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
@@ -135,7 +178,14 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Notification)],
         ['query'],
       ),
+    'initMenu' : IDL.Func([], [], []),
     'placeOrder' : IDL.Func([OrderInput], [IDL.Nat], []),
+    'resetMenuToDefaults' : IDL.Func([], [], []),
+    'updateMenuItem' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool],
+        [],
+        [],
+      ),
     'updateOrderStatus' : IDL.Func([IDL.Nat, OrderStatus], [], []),
   });
 };

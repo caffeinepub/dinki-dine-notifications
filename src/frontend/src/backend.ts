@@ -89,6 +89,14 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface MenuItem {
+    id: bigint;
+    name: string;
+    available: boolean;
+    category: string;
+    printerNumber: bigint;
+    price: bigint;
+}
 export type Timestamp = bigint;
 export interface VehicleInfo {
     model: string;
@@ -134,13 +142,22 @@ export interface backendInterface {
     acknowledgeAllNotifications(): Promise<void>;
     acknowledgeNotification(notificationId: bigint): Promise<void>;
     addItemsToOrder(orderId: bigint, newItems: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
+    addMenuItem(name: string, category: string, price: bigint, printerNumber: bigint): Promise<bigint>;
+    clearAllData(): Promise<void>;
+    clearAllNotifications(): Promise<void>;
+    clearAllOrders(): Promise<void>;
+    deleteMenuItem(id: bigint): Promise<void>;
     getAllOrders(): Promise<Array<Order>>;
+    getMenuItems(): Promise<Array<MenuItem>>;
     getNotifications(): Promise<Array<Notification>>;
     getOrderById(id: bigint): Promise<Order>;
     getPendingOrders(): Promise<Array<Order>>;
     getUnacknowledgedCount(): Promise<bigint>;
     getUnacknowledgedNotifications(): Promise<Array<Notification>>;
+    initMenu(): Promise<void>;
     placeOrder(order: OrderInput): Promise<bigint>;
+    resetMenuToDefaults(): Promise<void>;
+    updateMenuItem(id: bigint, name: string, category: string, price: bigint, printerNumber: bigint, available: boolean): Promise<void>;
     updateOrderStatus(orderId: bigint, status: OrderStatus): Promise<void>;
 }
 import type { Order as _Order, OrderInput as _OrderInput, OrderItem as _OrderItem, OrderStatus as _OrderStatus, Timestamp as _Timestamp, VehicleInfo as _VehicleInfo } from "./declarations/backend.did.d.ts";
@@ -188,6 +205,76 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addMenuItem(arg0: string, arg1: string, arg2: bigint, arg3: bigint): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addMenuItem(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addMenuItem(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async clearAllData(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.clearAllData();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.clearAllData();
+            return result;
+        }
+    }
+    async clearAllNotifications(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.clearAllNotifications();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.clearAllNotifications();
+            return result;
+        }
+    }
+    async clearAllOrders(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.clearAllOrders();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.clearAllOrders();
+            return result;
+        }
+    }
+    async deleteMenuItem(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteMenuItem(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteMenuItem(arg0);
+            return result;
+        }
+    }
     async getAllOrders(): Promise<Array<Order>> {
         if (this.processError) {
             try {
@@ -200,6 +287,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getAllOrders();
             return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getMenuItems(): Promise<Array<MenuItem>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMenuItems();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMenuItems();
+            return result;
         }
     }
     async getNotifications(): Promise<Array<Notification>> {
@@ -272,6 +373,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async initMenu(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.initMenu();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.initMenu();
+            return result;
+        }
+    }
     async placeOrder(arg0: OrderInput): Promise<bigint> {
         if (this.processError) {
             try {
@@ -283,6 +398,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.placeOrder(to_candid_OrderInput_n6(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async resetMenuToDefaults(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.resetMenuToDefaults();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.resetMenuToDefaults();
+            return result;
+        }
+    }
+    async updateMenuItem(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: bigint, arg5: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateMenuItem(arg0, arg1, arg2, arg3, arg4, arg5);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateMenuItem(arg0, arg1, arg2, arg3, arg4, arg5);
             return result;
         }
     }

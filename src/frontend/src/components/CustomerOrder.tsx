@@ -16,6 +16,7 @@ import type { OrderInput, OrderItem } from "../backend";
 import type { OrderStatus } from "../backend";
 import { useActor } from "../hooks/useActor";
 import type { MenuActor, MenuItem } from "../types/menu";
+import { TablePicker } from "./TablePicker";
 
 type Screen = "car" | "menu" | "confirm";
 
@@ -23,19 +24,40 @@ const SCHEDULES: Record<
   string,
   { label: string; check: (h: number, m: number) => boolean }
 > = {
-  Breakfast: {
-    label: "07:00 – 12:00",
-    check: (h) => h >= 7 && h < 12,
+  "Hot n Hot": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
   },
-  "North Indian": {
-    label: "11:30 – 22:30",
-    check: (h, m) => h * 60 + m >= 11 * 60 + 30 && h * 60 + m <= 22 * 60 + 30,
+  Dosa: {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
   },
-  Chinese: {
-    label: "11:30 – 22:30",
-    check: (h, m) => h * 60 + m >= 11 * 60 + 30 && h * 60 + m <= 22 * 60 + 30,
+  Breakfast: { label: "07:00 – 12:00", check: (h) => h >= 7 && h < 12 },
+  Chaat: {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
   },
-  Roti: {
+  "Ice cream novelties": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  "Ice cream cups n packs": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  "Juice n Shakes": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  Soup: {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  Starter: {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  "Roti (Bread)": {
     label: "11:30–15:30 & 19:00–22:30",
     check: (h, m) => {
       const t = h * 60 + m;
@@ -44,6 +66,22 @@ const SCHEDULES: Record<
         (t >= 19 * 60 && t <= 22 * 60 + 30)
       );
     },
+  },
+  "Main course": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  "Rice n Noodles": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  Softdrinks: {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
+  },
+  "Grill n spice": {
+    label: "09:00 – 23:00",
+    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
   },
 };
 
@@ -126,13 +164,11 @@ export function CustomerOrder() {
   };
 
   const handleStart = () => {
-    const val = carNumber.trim().toUpperCase();
-    if (!val) {
-      setCarError("Please enter your vehicle number.");
+    if (!carNumber.trim()) {
+      setCarError("Please select your table.");
       return;
     }
     setCarError("");
-    setCarNumber(val);
     setScreen("menu");
   };
 
@@ -186,25 +222,24 @@ export function CustomerOrder() {
         </div>
 
         {/* Card */}
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 overflow-y-auto max-h-[70vh]">
           <h2 className="text-lg font-semibold text-gray-800 mb-1">
-            Enter your vehicle number
+            Select your table
           </h2>
-          <p className="text-sm text-gray-500 mb-5">
-            We’ll bring your order right to you!
+          <p className="text-sm text-gray-500 mb-4">
+            Tap your table number to start ordering.
           </p>
 
-          <Input
-            data-ocid="customer.input"
-            value={carNumber}
-            onChange={(e) => {
-              setCarNumber(e.target.value.toUpperCase());
-              setCarError("");
-            }}
-            placeholder="e.g. MH 12 AB 3456"
-            className="text-center text-lg font-semibold tracking-widest uppercase placeholder:text-gray-300 placeholder:font-normal placeholder:tracking-normal border-gray-200 focus:border-cust-primary h-12"
-            onKeyDown={(e) => e.key === "Enter" && handleStart()}
-          />
+          <div className="mb-4">
+            <TablePicker
+              selectedTable={carNumber}
+              onSelect={(t) => {
+                setCarNumber(t);
+                setCarError("");
+              }}
+              occupiedTables={[]}
+            />
+          </div>
 
           {carError && (
             <p
@@ -218,8 +253,8 @@ export function CustomerOrder() {
           <Button
             data-ocid="customer.primary_button"
             onClick={handleStart}
-            disabled={isFetching}
-            className="mt-4 w-full h-12 text-base font-semibold bg-cust-primary hover:bg-cust-primary-dark text-white rounded-xl"
+            disabled={isFetching || !carNumber}
+            className="mt-4 w-full h-12 text-base font-semibold bg-cust-primary hover:bg-cust-primary-dark text-white rounded-xl disabled:opacity-50"
           >
             Start Ordering
             <ChevronRight className="w-5 h-5 ml-1" />
