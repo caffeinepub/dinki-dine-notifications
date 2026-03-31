@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   AlertTriangle,
+  Car,
   Clock,
   ShoppingBag,
   UtensilsCrossed,
@@ -228,6 +229,7 @@ interface NewOrderModalProps {
   existingOrders: Order[];
   backendMenuItems?: BackendMenuItem[];
   defaultTakeAway?: boolean;
+  defaultDriveIn?: boolean;
 }
 
 export function NewOrderModal({
@@ -238,13 +240,17 @@ export function NewOrderModal({
   existingOrders,
   backendMenuItems,
   defaultTakeAway = false,
+  defaultDriveIn = false,
 }: NewOrderModalProps) {
-  const [orderType, setOrderType] = useState<"dineIn" | "takeAway">(
-    defaultTakeAway ? "takeAway" : "dineIn",
+  const [orderType, setOrderType] = useState<"dineIn" | "takeAway" | "driveIn">(
+    defaultDriveIn ? "driveIn" : defaultTakeAway ? "takeAway" : "dineIn",
   );
   const [licensePlate, setLicensePlate] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [driveInPlate, setDriveInPlate] = useState("");
+  const [driveInMake, setDriveInMake] = useState("");
+  const [driveInColor, setDriveInColor] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [packingCharge, setPackingCharge] = useState("");
   const [deliveryCharge, setDeliveryCharge] = useState("");
@@ -255,9 +261,11 @@ export function NewOrderModal({
   // Sync with defaultTakeAway prop when modal opens
   useEffect(() => {
     if (open) {
-      setOrderType(defaultTakeAway ? "takeAway" : "dineIn");
+      setOrderType(
+        defaultDriveIn ? "driveIn" : defaultTakeAway ? "takeAway" : "dineIn",
+      );
     }
-  }, [open, defaultTakeAway]);
+  }, [open, defaultTakeAway, defaultDriveIn]);
 
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(new Date()), 60_000);
@@ -273,15 +281,21 @@ export function NewOrderModal({
   const effectiveLicensePlate =
     orderType === "takeAway"
       ? `TAKEAWAY-${customerPhone.trim() || customerName.trim() || "WALK-IN"}`
-      : licensePlate;
+      : orderType === "driveIn"
+        ? driveInPlate.trim()
+        : licensePlate;
 
   const existingTab = effectiveLicensePlate.trim()
-    ? existingOrders.find(
-        (o) =>
-          o.status !== OrderStatus.fulfilled &&
+    ? existingOrders.find((o) => {
+        if (o.status === OrderStatus.fulfilled) return false;
+        const plateMatch =
           o.vehicleInfo.licensePlate.trim().toLowerCase() ===
-            effectiveLicensePlate.trim().toLowerCase(),
-      )
+          effectiveLicensePlate.trim().toLowerCase();
+        if (orderType === "driveIn") {
+          return plateMatch && o.vehicleInfo.model === "DRIVE-IN";
+        }
+        return plateMatch;
+      })
     : undefined;
 
   const availableItems = allItems.filter(isAvailableNow);
@@ -300,6 +314,9 @@ export function NewOrderModal({
     setLicensePlate("");
     setCustomerName("");
     setCustomerPhone("");
+    setDriveInPlate("");
+    setDriveInMake("");
+    setDriveInColor("");
     setSelectedItems(new Set());
     setPackingCharge("");
     setDeliveryCharge("");
@@ -364,6 +381,10 @@ export function NewOrderModal({
       setError("Please select a table.");
       return;
     }
+    if (orderType === "driveIn" && !driveInPlate.trim()) {
+      setError("Please enter your car number.");
+      return;
+    }
     if (selectedItems.size === 0) {
       setError("Please select at least one item.");
       return;
@@ -393,12 +414,20 @@ export function NewOrderModal({
     const order: OrderInput = {
       id: 0n,
       status: OrderStatus.pending,
-      vehicleInfo: {
-        make: "",
-        model: "",
-        color: "",
-        licensePlate: effectiveLicensePlate.trim(),
-      },
+      vehicleInfo:
+        orderType === "driveIn"
+          ? {
+              make: driveInMake.trim() || "N/A",
+              model: "DRIVE-IN",
+              color: driveInColor.trim() || "N/A",
+              licensePlate: driveInPlate.trim(),
+            }
+          : {
+              make: "",
+              model: "",
+              color: "",
+              licensePlate: effectiveLicensePlate.trim(),
+            },
       customerMobile: customerPhone.trim(),
       timestamp: BigInt(Date.now()) * 1_000_000n,
       items,
@@ -467,6 +496,19 @@ export function NewOrderModal({
               <ShoppingBag className="w-3.5 h-3.5" />
               Take Away
             </button>
+            <button
+              type="button"
+              data-ocid="new_order.toggle"
+              onClick={() => setOrderType("driveIn")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors border-l border-din-border ${
+                orderType === "driveIn"
+                  ? "bg-yellow-400/20 text-yellow-400"
+                  : "bg-din-surface-alt text-din-muted hover:text-din-text"
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              Drive In
+            </button>
           </div>
 
           {/* Existing tab banner */}
@@ -498,7 +540,7 @@ export function NewOrderModal({
                   .map((o) => o.vehicleInfo.licensePlate)}
               />
             </div>
-          ) : (
+          ) : orderType === "takeAway" ? (
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-din-orange uppercase tracking-wider">
                 Customer Details
@@ -535,6 +577,61 @@ export function NewOrderModal({
                   Order ID:{" "}
                   <span className="font-mono text-din-orange">
                     TAKEAWAY-{customerPhone.trim() || customerName.trim()}
+                  </span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                Car Details
+              </h3>
+              <div>
+                <Label className="text-xs text-din-muted">
+                  Car Number / License Plate{" "}
+                  <span className="text-din-red">*</span>
+                </Label>
+                <Input
+                  data-ocid="new_order.input"
+                  value={driveInPlate}
+                  onChange={(e) => setDriveInPlate(e.target.value)}
+                  placeholder="e.g. MH 12 AB 1234"
+                  className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-din-muted">
+                    Car Make (optional)
+                  </Label>
+                  <Input
+                    data-ocid="new_order.input"
+                    value={driveInMake}
+                    onChange={(e) => setDriveInMake(e.target.value)}
+                    placeholder="e.g. Maruti, Hyundai"
+                    className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-din-muted">
+                    Car Color (optional)
+                  </Label>
+                  <Input
+                    data-ocid="new_order.input"
+                    value={driveInColor}
+                    onChange={(e) => setDriveInColor(e.target.value)}
+                    placeholder="e.g. Red, White"
+                    className="bg-din-surface-alt border-din-border text-din-text placeholder:text-din-muted/50 h-8 text-sm"
+                  />
+                </div>
+              </div>
+              {driveInPlate && (
+                <p className="text-[10px] text-din-muted">
+                  Car:{" "}
+                  <span className="font-mono text-yellow-400">
+                    {driveInPlate.trim()}
+                    {driveInMake ? ` • ${driveInMake}` : ""}
+                    {driveInColor ? ` • ${driveInColor}` : ""}
                   </span>
                 </p>
               )}
@@ -669,7 +766,9 @@ export function NewOrderModal({
             className={`text-white font-semibold ${
               orderType === "takeAway"
                 ? "bg-din-orange hover:bg-din-orange/80"
-                : "bg-din-teal hover:bg-din-teal/80"
+                : orderType === "driveIn"
+                  ? "bg-yellow-500 hover:bg-yellow-400"
+                  : "bg-din-teal hover:bg-din-teal/80"
             }`}
           >
             {isSubmitting

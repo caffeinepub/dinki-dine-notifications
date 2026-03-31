@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Car,
   CheckCircle2,
   ChefHat,
   Clock,
@@ -17,6 +16,14 @@ import { OrderStatus } from "../backend";
 import type { MenuItem } from "../types/menu";
 import { AddItemsModal } from "./AddItemsModal";
 import { IssueBillModal } from "./IssueBillModal";
+
+// Drive-In / TakeAway detection helpers
+function isDriveInOrder(order: Order): boolean {
+  return order.vehicleInfo.model === "DRIVE-IN";
+}
+function isTakeAwayOrder(order: Order): boolean {
+  return order.vehicleInfo.licensePlate?.startsWith("TAKEAWAY-") ?? false;
+}
 
 interface OrderCardProps {
   order: Order;
@@ -150,6 +157,22 @@ export function OrderCard({
 
       const win = window.open("", "_blank", "width=400,height=600");
       if (!win) continue;
+      const orderTypeLabel = isDriveInOrder(order)
+        ? "DRIVE-IN"
+        : isTakeAwayOrder(order)
+          ? "TAKE AWAY"
+          : "DINE-IN";
+      const locationLabel = isDriveInOrder(order) ? "Car No" : "Table";
+      const locationValue = isDriveInOrder(order)
+        ? order.vehicleInfo.licensePlate
+        : isTakeAwayOrder(order)
+          ? order.vehicleInfo.licensePlate.replace("TAKEAWAY-", "")
+          : order.vehicleInfo.licensePlate;
+      const carDetails =
+        isDriveInOrder(order) &&
+        (order.vehicleInfo.make !== "N/A" || order.vehicleInfo.color !== "N/A")
+          ? `  Car: ${[order.vehicleInfo.make, order.vehicleInfo.color].filter((v) => v && v !== "N/A").join(", ")}`
+          : "";
       win.document.write(`<html><head><title>KOT #${kotNo} – Kitchen ${printer}</title><style>
       body { font-family: monospace; font-size: 13px; padding: 16px; margin: 0; }
       .center { text-align: center; }
@@ -158,14 +181,19 @@ export function OrderCard({
     </style></head><body>
     <pre class="center">=====================================
          DINKI DINE
-      Drive-in &amp; Dine-in
+      ${orderTypeLabel}
 =====================================
   KITCHEN STATION ${printer}
 =====================================
   KOT No: ${kotNo}
   Date: ${dateStr}   Time: ${timeStr}
 -------------------------------------
-  Table: ${order.vehicleInfo.licensePlate}
+  ${locationLabel}: ${locationValue}${
+    carDetails
+      ? `
+${carDetails}`
+      : ""
+  }
 -------------------------------------
   ITEMS:
 ${itemLines}
@@ -188,13 +216,34 @@ ${itemLines}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-din-teal uppercase tracking-wider">
-              Table
-            </span>
-            <span className="text-sm font-bold font-mono text-din-text bg-din-surface-alt px-2 py-0.5 rounded border border-din-border">
-              {order.vehicleInfo.licensePlate}
-            </span>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs font-semibold uppercase tracking-wider ${isDriveInOrder(order) ? "text-yellow-400" : isTakeAwayOrder(order) ? "text-din-orange" : "text-din-teal"}`}
+              >
+                {isDriveInOrder(order)
+                  ? "Car"
+                  : isTakeAwayOrder(order)
+                    ? "Take Away"
+                    : "Table"}
+              </span>
+              <span className="text-sm font-bold font-mono text-din-text bg-din-surface-alt px-2 py-0.5 rounded border border-din-border">
+                {isDriveInOrder(order)
+                  ? order.vehicleInfo.licensePlate
+                  : isTakeAwayOrder(order)
+                    ? order.vehicleInfo.licensePlate.replace("TAKEAWAY-", "")
+                    : order.vehicleInfo.licensePlate}
+              </span>
+            </div>
+            {isDriveInOrder(order) &&
+              (order.vehicleInfo.make !== "N/A" ||
+                order.vehicleInfo.color !== "N/A") && (
+                <span className="text-[10px] text-din-muted pl-0.5">
+                  {[order.vehicleInfo.make, order.vehicleInfo.color]
+                    .filter((v) => v && v !== "N/A")
+                    .join(" • ")}
+                </span>
+              )}
           </div>
           <Badge
             className={`text-[10px] border ${statusCfg.className} bg-transparent`}
@@ -310,7 +359,7 @@ ${itemLines}
               onClick={() => onUpdateStatus(order.id, OrderStatus.fulfilled)}
               className="h-7 text-xs px-3 bg-din-green hover:bg-din-green/80 text-white font-semibold"
             >
-              <Car className="w-3 h-3 mr-1" />
+              <CheckCircle2 className="w-3 h-3 mr-1" />
               Fulfill
             </Button>
           )}

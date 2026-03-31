@@ -92,45 +92,76 @@ actor {
   let notifications = Map.empty<Nat, Notification>();
   let menuItems = Map.empty<Nat, MenuItem>();
 
+  // Default menu items matching the 14 live categories
+  let DEFAULT_MENU : [(Text, Text, Nat, Nat)] = [
+    // Hot n Hot - printer 1
+    ("Veg Puff", "Hot n Hot", 30, 1),
+    ("Samosa", "Hot n Hot", 20, 1),
+    ("Aloo Tikki", "Hot n Hot", 40, 1),
+    // Dosa - printer 1
+    ("Masala Dosa", "Dosa", 120, 1),
+    ("Plain Dosa", "Dosa", 90, 1),
+    ("Rava Dosa", "Dosa", 110, 1),
+    ("Set Dosa", "Dosa", 100, 1),
+    // Breakfast - printer 1
+    ("Idli Sambar", "Breakfast", 90, 1),
+    ("Medu Vada", "Breakfast", 80, 1),
+    ("Upma", "Breakfast", 70, 1),
+    ("Poha", "Breakfast", 60, 1),
+    ("Filter Coffee", "Breakfast", 50, 1),
+    // Chaat - printer 1
+    ("Pani Puri", "Chaat", 60, 1),
+    ("Bhel Puri", "Chaat", 70, 1),
+    ("Sev Puri", "Chaat", 70, 1),
+    // Ice cream novelties - printer 1
+    ("Choco Bar", "Ice cream novelties", 30, 1),
+    ("Kulfi", "Ice cream novelties", 40, 1),
+    // Ice cream cups n packs - printer 1
+    ("Vanilla Cup", "Ice cream cups n packs", 50, 1),
+    ("Chocolate Cup", "Ice cream cups n packs", 60, 1),
+    // Juice n Shakes - printer 1
+    ("Mango Juice", "Juice n Shakes", 80, 1),
+    ("Mixed Fruit Shake", "Juice n Shakes", 100, 1),
+    ("Mango Lassi", "Juice n Shakes", 90, 1),
+    // Soup - printer 2
+    ("Tomato Soup", "Soup", 80, 2),
+    ("Sweet Corn Soup", "Soup", 90, 2),
+    ("Veg Soup", "Soup", 85, 2),
+    // Starter - printer 2
+    ("Paneer Tikka", "Starter", 250, 2),
+    ("Spring Rolls", "Starter", 130, 2),
+    ("Manchurian", "Starter", 160, 2),
+    ("Chilli Paneer", "Starter", 180, 2),
+    // Roti (Bread) - printer 4
+    ("Butter Roti", "Roti (Bread)", 30, 4),
+    ("Butter Naan", "Roti (Bread)", 60, 4),
+    ("Tandoori Roti", "Roti (Bread)", 40, 4),
+    ("Laccha Paratha", "Roti (Bread)", 70, 4),
+    // Main course - printer 2
+    ("Dal Makhani", "Main course", 180, 2),
+    ("Shahi Paneer", "Main course", 220, 2),
+    ("Matar Paneer", "Main course", 200, 2),
+    ("Chole", "Main course", 160, 2),
+    // Rice n Noodles - printer 3
+    ("Veg Biryani", "Rice n Noodles", 200, 3),
+    ("Veg Fried Rice", "Rice n Noodles", 150, 3),
+    ("Hakka Noodles", "Rice n Noodles", 140, 3),
+    ("Schezwan Rice", "Rice n Noodles", 160, 3),
+    // Softdrinks - printer 1
+    ("Coca Cola", "Softdrinks", 40, 1),
+    ("Sprite", "Softdrinks", 40, 1),
+    ("Limca", "Softdrinks", 40, 1),
+    // Grill n spice - printer 3
+    ("Grilled Sandwich", "Grill n spice", 120, 3),
+    ("Corn Cheese Grill", "Grill n spice", 140, 3),
+  ];
+
   // Seed default menu items
   func seedMenu() {
     if (menuSeeded) return;
     menuSeeded := true;
 
-    let defaults : [(Text, Text, Nat, Nat)] = [
-      // Breakfast - printer 1
-      ("Masala Dosa", "Breakfast", 120, 1),
-      ("Idli Sambar", "Breakfast", 90, 1),
-      ("Medu Vada", "Breakfast", 80, 1),
-      ("Upma", "Breakfast", 70, 1),
-      ("Aloo Paratha", "Breakfast", 100, 1),
-      ("Poha", "Breakfast", 60, 1),
-      ("Mango Lassi", "Breakfast", 80, 1),
-      ("Filter Coffee", "Breakfast", 50, 1),
-      // North Indian - printer 2
-      ("Paneer Tikka", "North Indian", 250, 2),
-      ("Dal Makhani", "North Indian", 180, 2),
-      ("Veg Biryani", "North Indian", 200, 2),
-      ("Shahi Paneer", "North Indian", 220, 2),
-      ("Matar Paneer", "North Indian", 200, 2),
-      ("Chole Bhature", "North Indian", 160, 2),
-      ("Gulab Jamun", "North Indian", 60, 2),
-      // Chinese - printer 3
-      ("Spring Rolls", "Chinese", 130, 3),
-      ("Veg Fried Rice", "Chinese", 150, 3),
-      ("Hakka Noodles", "Chinese", 140, 3),
-      ("Manchurian", "Chinese", 160, 3),
-      ("Chilli Paneer", "Chinese", 180, 3),
-      ("Veg Soup", "Chinese", 90, 3),
-      // Roti - printer 4
-      ("Butter Roti", "Roti", 30, 4),
-      ("Phulka", "Roti", 25, 4),
-      ("Tandoori Roti", "Roti", 40, 4),
-      ("Butter Naan", "Roti", 60, 4),
-      ("Laccha Paratha", "Roti", 70, 4),
-    ];
-
-    for ((name, category, price, printer) in defaults.vals()) {
+    for ((name, category, price, printer) in DEFAULT_MENU.vals()) {
       let id = nextMenuItemId;
       nextMenuItemId += 1;
       menuItems.add(id, {
@@ -154,36 +185,8 @@ actor {
   public query func getMenuItems() : async [MenuItem] {
     if (not menuSeeded) {
       // Return default items inline for query (can't mutate in query)
-      let defaults : [(Text, Text, Nat, Nat)] = [
-        ("Masala Dosa", "Breakfast", 120, 1),
-        ("Idli Sambar", "Breakfast", 90, 1),
-        ("Medu Vada", "Breakfast", 80, 1),
-        ("Upma", "Breakfast", 70, 1),
-        ("Aloo Paratha", "Breakfast", 100, 1),
-        ("Poha", "Breakfast", 60, 1),
-        ("Mango Lassi", "Breakfast", 80, 1),
-        ("Filter Coffee", "Breakfast", 50, 1),
-        ("Paneer Tikka", "North Indian", 250, 2),
-        ("Dal Makhani", "North Indian", 180, 2),
-        ("Veg Biryani", "North Indian", 200, 2),
-        ("Shahi Paneer", "North Indian", 220, 2),
-        ("Matar Paneer", "North Indian", 200, 2),
-        ("Chole Bhature", "North Indian", 160, 2),
-        ("Gulab Jamun", "North Indian", 60, 2),
-        ("Spring Rolls", "Chinese", 130, 3),
-        ("Veg Fried Rice", "Chinese", 150, 3),
-        ("Hakka Noodles", "Chinese", 140, 3),
-        ("Manchurian", "Chinese", 160, 3),
-        ("Chilli Paneer", "Chinese", 180, 3),
-        ("Veg Soup", "Chinese", 90, 3),
-        ("Butter Roti", "Roti", 30, 4),
-        ("Phulka", "Roti", 25, 4),
-        ("Tandoori Roti", "Roti", 40, 4),
-        ("Butter Naan", "Roti", 60, 4),
-        ("Laccha Paratha", "Roti", 70, 4),
-      ];
-      return Array.tabulate<MenuItem>(defaults.size(), func(i) {
-        let (name, category, price, printer) = defaults[i];
+      return Array.tabulate<MenuItem>(DEFAULT_MENU.size(), func(i) {
+        let (name, category, price, printer) = DEFAULT_MENU[i];
         { id = i + 1; name; category; price; printerNumber = printer; available = true }
       });
     };

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Car,
   CheckCircle2,
   ChevronRight,
   Minus,
@@ -85,11 +86,19 @@ const SCHEDULES: Record<
   },
 };
 
-export function CustomerOrder() {
+interface CustomerOrderProps {
+  mode?: "customer" | "drivein";
+}
+
+export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
   const { actor, isFetching } = useActor();
   const [screen, setScreen] = useState<Screen>("car");
   const [carNumber, setCarNumber] = useState("");
   const [carError, setCarError] = useState("");
+  // Drive-In mode car details
+  const [carPlate, setCarPlate] = useState("");
+  const [carMake, setCarMake] = useState("");
+  const [carColor, setCarColor] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -164,9 +173,16 @@ export function CustomerOrder() {
   };
 
   const handleStart = () => {
-    if (!carNumber.trim()) {
-      setCarError("Please select your table.");
-      return;
+    if (mode === "drivein") {
+      if (!carPlate.trim()) {
+        setCarError("Please enter your car number.");
+        return;
+      }
+    } else {
+      if (!carNumber.trim()) {
+        setCarError("Please select your table.");
+        return;
+      }
     }
     setCarError("");
     setScreen("menu");
@@ -184,12 +200,20 @@ export function CustomerOrder() {
       }));
       const order: OrderInput = {
         id: 0n,
-        vehicleInfo: {
-          licensePlate: carNumber,
-          make: "N/A",
-          model: "N/A",
-          color: "N/A",
-        },
+        vehicleInfo:
+          mode === "drivein"
+            ? {
+                licensePlate: carPlate.trim(),
+                make: carMake.trim() || "N/A",
+                model: "DRIVE-IN",
+                color: carColor.trim() || "N/A",
+              }
+            : {
+                licensePlate: carNumber,
+                make: "N/A",
+                model: "N/A",
+                color: "N/A",
+              },
         customerMobile: "",
         items: orderItems,
         timestamp: BigInt(Date.now() * 1_000_000),
@@ -204,8 +228,106 @@ export function CustomerOrder() {
     }
   };
 
-  // ── Car Number Screen ──────────────────────────────────────────────────────
+  // ── Car Number / Drive-In Screen ────────────────────────────────────────────
   if (screen === "car") {
+    if (mode === "drivein") {
+      return (
+        <div className="cust-page min-h-screen flex flex-col items-center justify-center px-5 py-12 bg-cust-bg">
+          {/* Logo area */}
+          <div className="mb-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-cust-primary flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Car className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-cust-text tracking-tight">
+              Dinki Pos
+            </h1>
+            <p className="text-sm text-cust-muted mt-1">Drive-In Self Order</p>
+          </div>
+
+          {/* Car Details Card */}
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">
+              Enter Car Details
+            </h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Fill in your car details to view the menu and order
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="car-plate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Car Number / License Plate{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="car-plate"
+                  type="text"
+                  value={carPlate}
+                  onChange={(e) => {
+                    setCarPlate(e.target.value);
+                    setCarError("");
+                  }}
+                  placeholder="e.g. MH 12 AB 1234"
+                  className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-cust-primary focus:outline-none text-gray-800 text-sm transition-colors"
+                  autoCapitalize="characters"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="car-make"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Car Make
+                  </label>
+                  <input
+                    id="car-make"
+                    type="text"
+                    value={carMake}
+                    onChange={(e) => setCarMake(e.target.value)}
+                    placeholder="e.g. Maruti"
+                    className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-cust-primary focus:outline-none text-gray-800 text-sm transition-colors"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="car-color"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Car Color
+                  </label>
+                  <input
+                    id="car-color"
+                    type="text"
+                    value={carColor}
+                    onChange={(e) => setCarColor(e.target.value)}
+                    placeholder="e.g. Red"
+                    className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-cust-primary focus:outline-none text-gray-800 text-sm transition-colors"
+                  />
+                </div>
+              </div>
+
+              {carError && <p className="text-sm text-red-500">{carError}</p>}
+
+              <button
+                type="button"
+                onClick={handleStart}
+                className="w-full h-12 rounded-xl bg-cust-primary hover:bg-cust-primary-dark text-white font-semibold text-base flex items-center justify-center gap-2 transition-colors mt-2"
+              >
+                <Car className="w-5 h-5" />
+                View Menu
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Customer Mode (table-based) screen ──
     return (
       <div className="cust-page min-h-screen flex flex-col items-center justify-center px-5 py-12 bg-cust-bg">
         {/* Logo area */}
@@ -216,9 +338,7 @@ export function CustomerOrder() {
           <h1 className="text-2xl font-bold text-cust-text tracking-tight">
             Dinki Dine
           </h1>
-          <p className="text-sm text-cust-muted mt-1">
-            Drive-in &amp; Dine-in · Order from your car
-          </p>
+          <p className="text-sm text-cust-muted mt-1">Dine-In &amp; Takeaway</p>
         </div>
 
         {/* Card */}
@@ -291,7 +411,7 @@ export function CustomerOrder() {
             We’ll prepare it shortly.
           </p>
           <p className="text-cust-muted text-sm">
-            Car:{" "}
+            Table:{" "}
             <span className="font-semibold text-cust-text">{carNumber}</span>
           </p>
 
@@ -324,6 +444,9 @@ export function CustomerOrder() {
             onClick={() => {
               setCart({});
               setCarNumber("");
+              setCarPlate("");
+              setCarMake("");
+              setCarColor("");
               setScreen("car");
             }}
             className="mt-6 w-full h-12 text-base font-semibold bg-cust-primary hover:bg-cust-primary-dark text-white rounded-xl"
@@ -351,8 +474,10 @@ export function CustomerOrder() {
               Dinki Dine
             </p>
             <p className="text-xs text-gray-500 truncate">
-              Car:{" "}
-              <span className="font-semibold text-gray-700">{carNumber}</span>
+              {mode === "drivein" ? "Car:" : "Table:"}{" "}
+              <span className="font-semibold text-gray-700">
+                {mode === "drivein" ? carPlate : carNumber}
+              </span>
             </p>
           </div>
         </div>

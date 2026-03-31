@@ -14,6 +14,7 @@ import {
   Plus,
   ShoppingBag,
   Smartphone,
+  UtensilsCrossed,
   Volume2,
   VolumeX,
   X,
@@ -44,10 +45,15 @@ import { loadMutePref, saveMutePref, useSound } from "./hooks/useSound";
 
 const isCustomerMode =
   new URLSearchParams(window.location.search).get("mode") === "customer";
+const isDriveInMode =
+  new URLSearchParams(window.location.search).get("mode") === "drivein";
 
 export default function App() {
   if (isCustomerMode) {
     return <CustomerOrder />;
+  }
+  if (isDriveInMode) {
+    return <CustomerOrder mode="drivein" />;
   }
   return (
     <AdminPinGate>
@@ -123,6 +129,7 @@ function StaffDashboard() {
   const [isMuted, setIsMuted] = useState<boolean>(loadMutePref);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [newOrderDefaultTakeAway, setNewOrderDefaultTakeAway] = useState(false);
+  const [newOrderDefaultDriveIn, setNewOrderDefaultDriveIn] = useState(false);
   const [showMenuAdmin, setShowMenuAdmin] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
@@ -279,8 +286,9 @@ function StaffDashboard() {
     });
   };
 
-  const openNewOrder = (type?: "takeAway") => {
+  const openNewOrder = (type?: "takeAway" | "driveIn") => {
     setNewOrderDefaultTakeAway(type === "takeAway");
+    setNewOrderDefaultDriveIn(type === "driveIn");
     setShowNewOrderModal(true);
   };
 
@@ -566,7 +574,7 @@ function StaffDashboard() {
                 Dinki Pos
               </span>
               <span className="text-[10px] text-din-muted leading-none">
-                Drive-in &amp; Dine-in
+                Dine-In, Takeaway &amp; Drive-In
               </span>
             </div>
           </div>
@@ -684,7 +692,7 @@ function StaffDashboard() {
             icon={<Clock className="w-4 h-4" />}
           />
           <KpiCard
-            label="Active Drive-ins"
+            label="Active Tables"
             value={activeCount}
             accent="teal"
             icon={<Activity className="w-4 h-4" />}
@@ -693,7 +701,7 @@ function StaffDashboard() {
             label="Total Orders"
             value={totalOrders}
             accent="green"
-            icon={<Car className="w-4 h-4" />}
+            icon={<UtensilsCrossed className="w-4 h-4" />}
           />
           <KpiCard
             label="Total Items"
@@ -737,12 +745,14 @@ function StaffDashboard() {
         onClose={() => {
           setShowNewOrderModal(false);
           setNewOrderDefaultTakeAway(false);
+          setNewOrderDefaultDriveIn(false);
         }}
         onSubmit={handlePlaceOrder}
         onAddToTab={handleAddItems}
         existingOrders={orders}
         backendMenuItems={menuItems}
         defaultTakeAway={newOrderDefaultTakeAway}
+        defaultDriveIn={newOrderDefaultDriveIn}
       />
     </div>
   );

@@ -152,7 +152,7 @@ function TableCardOccupied({
     </style></head><body>
     <pre class="center">=====================================
          DINKI DINE
-      Drive-in &amp; Dine-in
+      Dine-In &amp; Takeaway
 =====================================
   KITCHEN STATION ${printer}
 =====================================

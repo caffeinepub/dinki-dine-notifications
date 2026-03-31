@@ -33,6 +33,10 @@ export function IssueBillModal({
 
   if (!order) return null;
 
+  const isDriveIn = order.vehicleInfo.model === "DRIVE-IN";
+  const isTakeAway =
+    order.vehicleInfo.licensePlate?.startsWith("TAKEAWAY-") ?? false;
+
   const regularItems = order.items.filter(
     (i) => !SPECIAL_ITEMS.includes(i.name),
   );
@@ -97,7 +101,7 @@ export function IssueBillModal({
                 DINKI DINE
               </p>
               <p className="text-din-muted text-[10px]">
-                Drive-in &amp; Dine-in
+                {isDriveIn ? "Drive-In" : isTakeAway ? "Take Away" : "Dine-In"}
               </p>
               <p className="text-din-muted text-[10px]">
                 Order #{Number(order.id).toString().padStart(4, "0")}
@@ -106,13 +110,29 @@ export function IssueBillModal({
 
             <div className="border-t border-dashed border-din-border/60 pt-2">
               <p className="text-din-text">
-                <span className="text-din-muted">Car: </span>
-                {order.vehicleInfo.color} {order.vehicleInfo.make}
+                <span className="text-din-muted">
+                  {isDriveIn
+                    ? "Car No: "
+                    : isTakeAway
+                      ? "Customer: "
+                      : "Table: "}
+                </span>
+                {isDriveIn
+                  ? order.vehicleInfo.licensePlate
+                  : isTakeAway
+                    ? order.vehicleInfo.licensePlate.replace("TAKEAWAY-", "")
+                    : order.vehicleInfo.licensePlate}
               </p>
-              <p className="text-din-text">
-                <span className="text-din-muted">Plate: </span>
-                {order.vehicleInfo.licensePlate}
-              </p>
+              {isDriveIn &&
+                (order.vehicleInfo.make !== "N/A" ||
+                  order.vehicleInfo.color !== "N/A") && (
+                  <p className="text-din-text">
+                    <span className="text-din-muted">Car: </span>
+                    {[order.vehicleInfo.make, order.vehicleInfo.color]
+                      .filter((v) => v && v !== "N/A")
+                      .join(", ")}
+                  </p>
+                )}
               <p className="text-din-text">
                 <span className="text-din-muted">Mobile: </span>
                 {order.customerMobile}

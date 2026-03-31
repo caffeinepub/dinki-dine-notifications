@@ -1,33 +1,43 @@
-# Dinki Pos – Customer Self-Ordering
+# Dinki Pos – Drive-In Feature
 
 ## Current State
-App has a staff-facing POS interface with tab-style ordering, menu admin, KOT printing, and invoice generation. The backend has `placeOrder`, `getMenuItems` APIs. No customer-facing view exists yet.
+
+The app supports two ordering modes:
+- **Dine-In**: Staff or customer selects a table from the floor grid; order identified by table code (e.g., "FF 12")
+- **Takeaway**: Customer name + phone entered; `vehicleInfo.licensePlate` stored as "TAKEAWAY-{name}"
+
+Customer self-ordering is available at `?mode=customer` showing a table picker then menu.
+
+There is no Drive-In mode. The `vehicleInfo` struct (licensePlate, make, model, color) is underutilized — make/model/color are always "N/A".
 
 ## Requested Changes (Diff)
 
 ### Add
-- Customer ordering page accessible via URL param `?mode=customer` (no separate route needed)
-- Customer page flow:
-  1. Enter car/vehicle number (license plate text field)
-  2. Browse time-based menu (same scheduling: Breakfast 7-12, NI/Chinese 11:30-22:30, Roti 11:30-15:30 & 19-22:30)
-  3. Add items to cart with quantity controls
-  4. See running total
-  5. Submit order — calls `placeOrder` backend API
-  6. Order confirmation screen shown to customer
-- Staff side: customer-placed orders appear in Live Orders just like staff orders, with a notification alert labeled "Customer Order"
-- Customer page is mobile-first, clean and simple (no admin/staff controls visible)
+- Drive-In order type across the entire app
+- Drive-In detection convention: `vehicleInfo.model === "DRIVE-IN"` flags an order as drive-in; `licensePlate` holds the actual car plate; `make` = car make; `color` = car color
+- Drive-In self-ordering page at `?mode=drivein`: shows a large car 🚗 icon; clicking it opens a car details form (plate required, make/color optional), then shows the time-based menu for ordering
+- Drive-In tab in NewOrderModal (staff) alongside Dine In and Take Away
+- "Drive In Order" option in SideDrawer nav
+- OrderCard: detect drive-in, show "Car" label instead of "Table", show make/color if available; KOT header updated
+- IssueBillModal: show "Car:" instead of "Table:" for drive-in orders
+- App.tsx: detect `?mode=drivein` URL param and render drive-in self-ordering screen
 
 ### Modify
-- App.tsx: detect `?mode=customer` in URL and render CustomerOrder page instead of staff dashboard
-- Notification message for customer orders: "New customer order – Car: [plate]"
+- `CustomerOrder.tsx`: Refactor to support both `mode=customer` (table-based) and `mode=drivein` (car-based) modes. In drivein mode: landing screen shows a big car icon, tap opens car details form, fill details → browse menu → confirm order.
+- `NewOrderModal.tsx`: Add third tab "Drive In"; drive-in shows car number input + optional make/color fields; no table picker.
+- `SideDrawer.tsx`: Add Drive-In Order menu item.
+- `App.tsx`: Add `mode=drivein` URL detection alongside existing `mode=customer`.
+- `OrderCard.tsx`: Display drive-in badge, show car details in header; update KOT print to show car info.
+- `IssueBillModal.tsx`: Show "Car:" line instead of "Table:" for drive-in orders.
 
 ### Remove
-- Nothing removed
+- Nothing removed; drive-in is purely additive.
 
 ## Implementation Plan
-1. Create `src/frontend/src/components/CustomerOrder.tsx` — full customer ordering page
-   - Car number entry screen → menu browsing screen → cart review → confirmation
-   - Uses same menu scheduling logic as staff view
-   - Calls `getMenuItems` and `placeOrder` from backend
-2. Modify `App.tsx` to check `window.location.search` for `?mode=customer` and render `<CustomerOrder />` instead of main staff UI
-3. The VehicleInfo fields (make, model, color) not relevant for customer — use licensePlate as car number, fill others with placeholder "N/A"
+
+1. **CustomerOrder.tsx**: Accept a `mode` prop or detect URL param internally. In `drivein` mode: initial screen is a car-icon landing page; clicking the icon shows car details form (plate required, make/color optional); then flows to menu and confirm. In `customer` mode (existing): unchanged table picker flow.
+2. **App.tsx**: Add `isDriveIn` check for `?mode=drivein`; render `<CustomerOrder mode="drivein" />` (or pass prop). Add `openNewOrder` support for type `"driveIn"`.
+3. **NewOrderModal.tsx**: Add `"driveIn"` to order type state; add a third tab; show car details inputs; on submit set `vehicleInfo.model = "DRIVE-IN"` with actual plate/make/color.
+4. **SideDrawer.tsx**: Add Drive-In Order nav item that calls `onOpenNewOrder("driveIn")`.
+5. **OrderCard.tsx**: Helper `isDriveIn(order)` checks `order.vehicleInfo.model === "DRIVE-IN"`; update header label, KOT format.
+6. **IssueBillModal.tsx**: Use same helper to show "Car:" for drive-in.

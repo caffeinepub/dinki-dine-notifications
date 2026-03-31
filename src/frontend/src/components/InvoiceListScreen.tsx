@@ -51,7 +51,7 @@ function printInvoice(order: Order) {
   w.document.write(`
     <html><head><title>Invoice #${Number(order.id).toString().padStart(4, "0")}</title></head>
     <body style="font-family:monospace;font-size:12px;padding:20px;max-width:300px;margin:0 auto">
-    <div style="text-align:center"><b>DINKI DINE</b><br/>Drive-in &amp; Dine-in<br/>Invoice #${Number(order.id).toString().padStart(4, "0")}</div>
+    <div style="text-align:center"><b>DINKI DINE</b><br/>Dine-In &amp; Takeaway<br/>Invoice #${Number(order.id).toString().padStart(4, "0")}</div>
     <hr/>
     <div>Table: ${order.vehicleInfo.licensePlate}</div>
     <hr/>

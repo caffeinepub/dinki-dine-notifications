@@ -2,6 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Activity,
   BarChart3,
+  Car,
   ChefHat,
   ClipboardList,
   FileText,
@@ -36,7 +37,7 @@ interface SideDrawerProps {
   onClose: () => void;
   currentView: AppView;
   onNavigate: (view: AppView) => void;
-  onOpenNewOrder: (type?: "takeAway") => void;
+  onOpenNewOrder: (type?: "takeAway" | "driveIn") => void;
   onOpenMenuAdmin: () => void;
 }
 
@@ -70,6 +71,14 @@ export function SideDrawer({
       icon: <ShoppingBag className="w-4 h-4" />,
       action: () => {
         onOpenNewOrder("takeAway");
+        onClose();
+      },
+    },
+    {
+      label: "Drive In Order",
+      icon: <Car className="w-4 h-4" />,
+      action: () => {
+        onOpenNewOrder("driveIn");
         onClose();
       },
     },
