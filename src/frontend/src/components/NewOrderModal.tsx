@@ -230,6 +230,7 @@ interface NewOrderModalProps {
   backendMenuItems?: BackendMenuItem[];
   defaultTakeAway?: boolean;
   defaultDriveIn?: boolean;
+  actorReady?: boolean;
 }
 
 export function NewOrderModal({
@@ -241,6 +242,7 @@ export function NewOrderModal({
   backendMenuItems,
   defaultTakeAway = false,
   defaultDriveIn = false,
+  actorReady = true,
 }: NewOrderModalProps) {
   const [orderType, setOrderType] = useState<"dineIn" | "takeAway" | "driveIn">(
     defaultDriveIn ? "driveIn" : defaultTakeAway ? "takeAway" : "dineIn",
@@ -368,8 +370,11 @@ export function NewOrderModal({
         );
         resetForm();
         onClose();
-      } catch (_e) {
-        setError("Failed to add items to tab. Please try again.");
+      } catch (e) {
+        console.error("Add to tab failed:", e);
+        setError(
+          `Failed to add items to tab: ${e instanceof Error ? e.message : "Please try again."}`,
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -438,8 +443,11 @@ export function NewOrderModal({
       await onSubmit(order);
       resetForm();
       onClose();
-    } catch (_e) {
-      setError("Failed to place order. Please try again.");
+    } catch (e) {
+      console.error("Order placement failed:", e);
+      setError(
+        `Failed to place order: ${e instanceof Error ? e.message : "Please try again."}`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -474,40 +482,40 @@ export function NewOrderModal({
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("dineIn")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors ${
                 orderType === "dineIn"
                   ? "bg-din-teal/20 text-din-teal"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <UtensilsCrossed className="w-3.5 h-3.5" />
-              Dine In
+              <UtensilsCrossed className="w-4 h-4" />
+              <span>Dine In</span>
             </button>
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("takeAway")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "takeAway"
                   ? "bg-din-orange/20 text-din-orange"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              Take Away
+              <ShoppingBag className="w-4 h-4" />
+              <span>Take Away</span>
             </button>
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("driveIn")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "driveIn"
                   ? "bg-yellow-400/20 text-yellow-400"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <Car className="w-3.5 h-3.5" />
-              Drive In
+              <Car className="w-4 h-4" />
+              <span>Drive In</span>
             </button>
           </div>
 
@@ -762,7 +770,9 @@ export function NewOrderModal({
           <Button
             data-ocid="new_order.submit_button"
             onClick={handleSubmit}
-            disabled={isSubmitting || availableItems.length === 0}
+            disabled={
+              isSubmitting || availableItems.length === 0 || !actorReady
+            }
             className={`text-white font-semibold ${
               orderType === "takeAway"
                 ? "bg-din-orange hover:bg-din-orange/80"
@@ -771,13 +781,15 @@ export function NewOrderModal({
                   : "bg-din-teal hover:bg-din-teal/80"
             }`}
           >
-            {isSubmitting
-              ? existingTab
-                ? "Adding..."
-                : "Placing..."
-              : existingTab
-                ? "Add to Tab"
-                : "Place Order"}
+            {!actorReady
+              ? "Connecting..."
+              : isSubmitting
+                ? existingTab
+                  ? "Adding..."
+                  : "Placing..."
+                : existingTab
+                  ? "Add to Tab"
+                  : "Place Order"}
           </Button>
         </DialogFooter>
       </DialogContent>

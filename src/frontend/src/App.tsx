@@ -753,6 +753,7 @@ function StaffDashboard() {
         backendMenuItems={menuItems}
         defaultTakeAway={newOrderDefaultTakeAway}
         defaultDriveIn={newOrderDefaultDriveIn}
+        actorReady={!!actor}
       />
     </div>
   );

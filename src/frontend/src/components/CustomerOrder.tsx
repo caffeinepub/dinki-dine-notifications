@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { OrderInput, OrderItem } from "../backend";
-import type { OrderStatus } from "../backend";
+import { OrderStatus } from "../backend";
 import { useActor } from "../hooks/useActor";
 import type { MenuActor, MenuItem } from "../types/menu";
 import { TablePicker } from "./TablePicker";
@@ -217,12 +217,15 @@ export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
         customerMobile: "",
         items: orderItems,
         timestamp: BigInt(Date.now() * 1_000_000),
-        status: { pending: null } as unknown as OrderStatus,
+        status: OrderStatus.pending,
       };
       await actor.placeOrder(order);
       setScreen("confirm");
-    } catch (_e) {
-      setOrderError("Failed to place order. Please try again.");
+    } catch (e) {
+      console.error("Customer order failed:", e);
+      setOrderError(
+        `Failed to place order: ${e instanceof Error ? e.message : "Please try again."}`,
+      );
     } finally {
       setPlacing(false);
     }
@@ -591,7 +594,7 @@ export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
               type="button"
               data-ocid="cart.primary_button"
               onClick={handlePlaceOrder}
-              disabled={placing}
+              disabled={placing || !actor || cartItems.length === 0}
               className="w-full bg-cust-primary hover:bg-cust-primary-dark text-white rounded-2xl h-14 flex items-center px-5 shadow-2xl transition-colors disabled:opacity-70"
             >
               <span className="bg-white/20 rounded-lg px-2 py-0.5 text-sm font-bold min-w-[28px] text-center">
