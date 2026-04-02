@@ -134,7 +134,7 @@ function StaffDashboard() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [filter, setFilter] = useState<
-    "all" | "pending" | "preparing" | "ready" | "fulfilled"
+    "all" | "pending" | "preparing" | "ready"
   >("all");
   const [viewMode, setViewMode] = useState<"list" | "table">("list");
 
@@ -293,7 +293,9 @@ function StaffDashboard() {
   };
 
   const filteredOrders = orders.filter(
-    (o) => filter === "all" || o.status === filter,
+    (o) =>
+      o.status !== OrderStatus.fulfilled &&
+      (filter === "all" || o.status === filter),
   );
 
   const activeOrders = orders.filter((o) => o.status !== OrderStatus.fulfilled);
@@ -315,7 +317,6 @@ function StaffDashboard() {
     { key: "pending", label: "Pending" },
     { key: "preparing", label: "Preparing" },
     { key: "ready", label: "Ready" },
-    { key: "fulfilled", label: "Fulfilled" },
   ] as const;
 
   const viewToggle = (
