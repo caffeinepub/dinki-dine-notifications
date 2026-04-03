@@ -124,7 +124,11 @@ function StaffDashboard() {
   const { actor } = useActor();
   const { menuItems, reloadMenu } = useMenu();
 
-  const [orders, setOrders] = useState<Order[]>([]);
+  // liveOrders: only non-fulfilled orders shown on the main Live Orders page
+  const [liveOrders, setLiveOrders] = useState<Order[]>([]);
+  // allOrders: ALL orders including fulfilled, used for reports/invoices/KPI totals
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isMuted, setIsMuted] = useState<boolean>(loadMutePref);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
@@ -157,12 +161,14 @@ function StaffDashboard() {
         actor.getAllOrders(),
         actor.getNotifications(),
       ]);
-      // Filter out fulfilled orders so the live page never shows closed orders
-      setOrders(
-        fetchedOrders
-          .filter((o) => o.status !== OrderStatus.fulfilled)
-          .slice()
-          .sort((a, b) => Number(b.timestamp - a.timestamp)),
+
+      const sortedAll = fetchedOrders
+        .slice()
+        .sort((a, b) => Number(b.timestamp - a.timestamp));
+
+      setAllOrders(sortedAll);
+      setLiveOrders(
+        sortedAll.filter((o) => o.status !== OrderStatus.fulfilled),
       );
 
       const newNotifs = fetchedNotifs.filter(
@@ -203,12 +209,11 @@ function StaffDashboard() {
     try {
       await actor.updateOrderStatus(orderId, status);
 
-      // Optimistic update: if the order is now fulfilled, remove it from the
-      // live list immediately without waiting for the next poll cycle.
+      // Optimistic update on liveOrders: remove fulfilled orders immediately
       if (status === OrderStatus.fulfilled) {
-        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        setLiveOrders((prev) => prev.filter((o) => o.id !== orderId));
       } else {
-        setOrders((prev) =>
+        setLiveOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
         );
       }
@@ -220,8 +225,8 @@ function StaffDashboard() {
         relatedNotifs.map((n) => actor.acknowledgeNotification(n.id)),
       );
       await fetchData();
-      // Log activity
-      const order = orders.find((o) => o.id === orderId);
+      // Log activity — look up order in allOrders so fulfilled orders are found too
+      const order = allOrders.find((o) => o.id === orderId);
       logActivity({
         table: order?.vehicleInfo.licensePlate ?? "",
         action:
@@ -307,22 +312,23 @@ function StaffDashboard() {
     setShowNewOrderModal(true);
   };
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.status !== OrderStatus.fulfilled &&
-      (filter === "all" || o.status === filter),
+  // Main page: show only live (non-fulfilled) orders, filtered by status pill
+  const filteredOrders = liveOrders.filter(
+    (o) => filter === "all" || o.status === filter,
   );
 
-  const activeOrders = orders.filter((o) => o.status !== OrderStatus.fulfilled);
+  // Table grid view: only open/active orders
+  const activeOrders = liveOrders;
 
-  const pendingCount = orders.filter(
+  // KPI counts: pending/active from liveOrders; totals from allOrders for accurate day totals
+  const pendingCount = liveOrders.filter(
     (o) => o.status === OrderStatus.pending,
   ).length;
-  const activeCount = orders.filter(
+  const activeCount = liveOrders.filter(
     (o) => o.status === OrderStatus.preparing || o.status === OrderStatus.ready,
   ).length;
-  const totalOrders = orders.length;
-  const totalItems = orders.reduce(
+  const totalOrders = allOrders.length;
+  const totalItems = allOrders.reduce(
     (s, o) => s + o.items.reduce((si, i) => si + Number(i.quantity), 0),
     0,
   );
@@ -488,13 +494,13 @@ function StaffDashboard() {
     );
   }
 
-  // Alternate views
+  // Alternate views — pass allOrders so reports/invoices see fulfilled orders too
   if (currentView === "summary") {
     return (
       <>
         <Toaster position="top-right" theme="dark" />
         <SummaryOfDay
-          orders={orders}
+          orders={allOrders}
           onBack={() => setCurrentView("dashboard")}
         />
       </>
@@ -505,7 +511,7 @@ function StaffDashboard() {
       <>
         <Toaster position="top-right" theme="dark" />
         <OrderListScreen
-          orders={orders}
+          orders={allOrders}
           onBack={() => setCurrentView("dashboard")}
         />
       </>
@@ -516,7 +522,7 @@ function StaffDashboard() {
       <>
         <Toaster position="top-right" theme="dark" />
         <InvoiceListScreen
-          orders={orders}
+          orders={allOrders}
           onBack={() => setCurrentView("dashboard")}
         />
       </>
@@ -535,7 +541,7 @@ function StaffDashboard() {
       <>
         <Toaster position="top-right" theme="dark" />
         <DayEndReport
-          orders={orders}
+          orders={allOrders}
           onBack={() => setCurrentView("dashboard")}
         />
       </>
@@ -765,7 +771,7 @@ function StaffDashboard() {
         }}
         onSubmit={handlePlaceOrder}
         onAddToTab={handleAddItems}
-        existingOrders={orders}
+        existingOrders={liveOrders}
         backendMenuItems={menuItems}
         defaultTakeAway={newOrderDefaultTakeAway}
         defaultDriveIn={newOrderDefaultDriveIn}
