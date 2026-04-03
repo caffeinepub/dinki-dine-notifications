@@ -157,12 +157,8 @@ function StaffDashboard() {
         actor.getAllOrders(),
         actor.getNotifications(),
       ]);
-      // Filter out fulfilled orders so the live page never shows closed orders
       setOrders(
-        fetchedOrders
-          .filter((o) => o.status !== OrderStatus.fulfilled)
-          .slice()
-          .sort((a, b) => Number(b.timestamp - a.timestamp)),
+        fetchedOrders.slice().sort((a, b) => Number(b.timestamp - a.timestamp)),
       );
 
       const newNotifs = fetchedNotifs.filter(
@@ -202,17 +198,6 @@ function StaffDashboard() {
     if (!actor) return;
     try {
       await actor.updateOrderStatus(orderId, status);
-
-      // Optimistic update: if the order is now fulfilled, remove it from the
-      // live list immediately without waiting for the next poll cycle.
-      if (status === OrderStatus.fulfilled) {
-        setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      } else {
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
-        );
-      }
-
       const relatedNotifs = notificationsRef.current.filter(
         (n) => !n.acknowledged && n.orderId === orderId,
       );

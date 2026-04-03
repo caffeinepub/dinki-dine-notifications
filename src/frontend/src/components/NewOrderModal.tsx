@@ -463,7 +463,7 @@ export function NewOrderModal({
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent
         data-ocid="new_order.dialog"
-        className="bg-din-surface border-din-border text-din-text max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-din-surface border-din-border text-din-text max-w-lg w-[calc(100vw-2rem)] sm:w-auto max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle className="text-din-text flex items-center justify-between">
@@ -477,45 +477,51 @@ export function NewOrderModal({
 
         <div className="space-y-4 py-2">
           {/* Order type toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-din-border">
+          <div className="w-full flex rounded-lg overflow-hidden border border-din-border">
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("dineIn")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors ${
                 orderType === "dineIn"
                   ? "bg-din-teal/20 text-din-teal"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <UtensilsCrossed className="w-4 h-4" />
-              <span>Dine In</span>
+              <UtensilsCrossed className="w-4 h-4 flex-shrink-0" />
+              <span className="leading-tight truncate w-full text-center">
+                Dine In
+              </span>
             </button>
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("takeAway")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "takeAway"
                   ? "bg-din-orange/20 text-din-orange"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Take Away</span>
+              <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+              <span className="leading-tight truncate w-full text-center">
+                Take Away
+              </span>
             </button>
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("driveIn")}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "driveIn"
                   ? "bg-yellow-400/20 text-yellow-400"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
               }`}
             >
-              <Car className="w-4 h-4" />
-              <span>Drive In</span>
+              <Car className="w-4 h-4 flex-shrink-0" />
+              <span className="leading-tight truncate w-full text-center">
+                Drive In
+              </span>
             </button>
           </div>
 
