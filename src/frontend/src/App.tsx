@@ -33,6 +33,7 @@ import { NewOrderModal } from "./components/NewOrderModal";
 import { NotificationItem } from "./components/NotificationItem";
 import { OrderCard } from "./components/OrderCard";
 import { OrderListScreen } from "./components/OrderListScreen";
+import { ReportsScreen } from "./components/ReportsScreen";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppView } from "./components/SideDrawer";
 import { SideDrawer } from "./components/SideDrawer";
@@ -168,7 +169,11 @@ function StaffDashboard() {
 
       setAllOrders(sortedAll);
       setLiveOrders(
-        sortedAll.filter((o) => o.status !== OrderStatus.fulfilled),
+        sortedAll.filter(
+          (o) =>
+            o.status !== OrderStatus.fulfilled &&
+            o.status !== OrderStatus.cancelled,
+        ),
       );
 
       const newNotifs = fetchedNotifs.filter(
@@ -298,6 +303,30 @@ function StaffDashboard() {
     );
   };
 
+  const handleCancelOrder = async (orderId: bigint, reason: string) => {
+    if (!actor) return;
+    await actor.cancelOrder(orderId, reason);
+    await fetchData();
+    toast.success(
+      `Order #${Number(orderId).toString().padStart(4, "0")} cancelled`,
+    );
+  };
+
+  const handleEditOrder = async (
+    orderId: bigint,
+    items: OrderItem[],
+    packingCharge: bigint,
+    deliveryCharge: bigint,
+    discount: bigint,
+    discountType: string,
+  ) => {
+    if (!actor) return;
+    await actor.updateOrderItems(orderId, items, packingCharge, deliveryCharge);
+    await actor.updateOrderDiscount(orderId, discount, discountType);
+    await fetchData();
+    toast.success("Invoice updated");
+  };
+
   const toggleMute = () => {
     setIsMuted((prev) => {
       const next = !prev;
@@ -418,6 +447,15 @@ function StaffDashboard() {
                   order={order}
                   onUpdateStatus={handleUpdateStatus}
                   onAddItems={handleAddItems}
+                  onCancelOrder={handleCancelOrder}
+                  onApplyDiscount={async (orderId, discount, discountType) => {
+                    if (!actor) return;
+                    await actor.updateOrderDiscount(
+                      orderId,
+                      discount,
+                      discountType,
+                    );
+                  }}
                   index={i + 1}
                   menuItems={menuItems}
                 />
@@ -524,6 +562,7 @@ function StaffDashboard() {
         <InvoiceListScreen
           orders={allOrders}
           onBack={() => setCurrentView("dashboard")}
+          onEditOrder={handleEditOrder}
         />
       </>
     );
@@ -553,6 +592,32 @@ function StaffDashboard() {
       <>
         <Toaster position="top-right" theme="dark" />
         <SettingsPanel onBack={() => setCurrentView("dashboard")} />
+      </>
+    );
+  }
+
+  if (currentView === "reports") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <ReportsScreen
+          orders={allOrders}
+          onBack={() => setCurrentView("dashboard")}
+          menuItems={menuItems}
+        />
+      </>
+    );
+  }
+
+  if (currentView === "cancelledOrders") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <OrderListScreen
+          orders={allOrders}
+          onBack={() => setCurrentView("dashboard")}
+          defaultFilter="cancelled"
+        />
       </>
     );
   }

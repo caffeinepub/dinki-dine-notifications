@@ -1,43 +1,71 @@
-# Dinki Pos – Drive-In Feature
+# Dinki Pos
 
 ## Current State
 
-The app supports two ordering modes:
-- **Dine-In**: Staff or customer selects a table from the floor grid; order identified by table code (e.g., "FF 12")
-- **Takeaway**: Customer name + phone entered; `vehicleInfo.licensePlate` stored as "TAKEAWAY-{name}"
+The app is a full-stack restaurant POS supporting Dine-In, Takeaway, and Drive-In modes. Backend uses Motoko with orders, notifications, and menu items stored in Maps. Frontend is React/TypeScript with components for: OrderCard, NewOrderModal, IssueBillModal, MenuAdmin, InvoiceListScreen, OrderListScreen, DayEndReport, SummaryOfDay, UserManagement, SettingsPanel, SideDrawer, TableGridView.
 
-Customer self-ordering is available at `?mode=customer` showing a table picker then menu.
+Current Order model: id, vehicleInfo (licensePlate, make, model, color), customerMobile, items (name, price, quantity), timestamp, status (pending/preparing/ready/fulfilled).
 
-There is no Drive-In mode. The `vehicleInfo` struct (licensePlate, make, model, color) is underutilized — make/model/color are always "N/A".
+Reports: Day-end report (printable), Summary of Day. Order List shows all orders with status filter. Invoice List shows fulfilled orders with print.
+
+No cancellation system, no discount support, no printer configuration, no advanced reporting (daily/weekly/monthly/yearly breakdown, tax reports, category/user/floor/staff-wise sales), no invoice editing for closed orders.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Drive-In order type across the entire app
-- Drive-In detection convention: `vehicleInfo.model === "DRIVE-IN"` flags an order as drive-in; `licensePlate` holds the actual car plate; `make` = car make; `color` = car color
-- Drive-In self-ordering page at `?mode=drivein`: shows a large car 🚗 icon; clicking it opens a car details form (plate required, make/color optional), then shows the time-based menu for ordering
-- Drive-In tab in NewOrderModal (staff) alongside Dine In and Take Away
-- "Drive In Order" option in SideDrawer nav
-- OrderCard: detect drive-in, show "Car" label instead of "Table", show make/color if available; KOT header updated
-- IssueBillModal: show "Car:" instead of "Table:" for drive-in orders
-- App.tsx: detect `?mode=drivein` URL param and render drive-in self-ordering screen
+1. **Closed Order Edit/Backup**: From Invoice List, allow editing a closed/fulfilled order — modify items, quantities, charges, discount; reprint invoice. Store edit history as backup.
+2. **Invoice Editing**: Edit issued invoices — adjust items, add/remove items, change packing/delivery charges, apply discount. Show edit history.
+3. **Reports Module** (new ReportsScreen component with sub-tabs):
+   - Daily / Weekly / Monthly / Yearly revenue reports with date range selector
+   - Tax Report: SGST + CGST breakdown by day/week/month/year
+   - Category-wise Sales Report: revenue and quantity per menu category
+   - User Sales Report: orders placed per staff user
+   - Floor-wise Sales Report: revenue per floor section (DG, DM, SG, SM, FF, FFD)
+   - Staff-wise Sales Report: revenue attributed to each staff member
+4. **Printer Configuration**: Settings screen section for configuring up to 4 printers — name, connection type (Bluetooth, WiFi, USB, Cloud), IP address/MAC/port, test print button. Stored in localStorage.
+5. **Order List Enhancements**:
+   - Separate tabs: All Orders / Cancelled Orders / Cancelled Order Summary
+   - Reason for cancellation field when cancelling an order
+   - Cancelled Order Summary: count, total value, reasons breakdown
+6. **Discount on Order Total**: In IssueBillModal and closed order editor — allow entering a flat (₹) or percentage (%) discount on the order total before grand total. Discount applied after tax, before final total. Stored on the order.
+7. **Cancel Order**: Button on OrderCard for pending/preparing orders to cancel with a reason. Updates order status to #cancelled in backend.
 
 ### Modify
-- `CustomerOrder.tsx`: Refactor to support both `mode=customer` (table-based) and `mode=drivein` (car-based) modes. In drivein mode: landing screen shows a big car icon, tap opens car details form, fill details → browse menu → confirm order.
-- `NewOrderModal.tsx`: Add third tab "Drive In"; drive-in shows car number input + optional make/color fields; no table picker.
-- `SideDrawer.tsx`: Add Drive-In Order menu item.
-- `App.tsx`: Add `mode=drivein` URL detection alongside existing `mode=customer`.
-- `OrderCard.tsx`: Display drive-in badge, show car details in header; update KOT print to show car info.
-- `IssueBillModal.tsx`: Show "Car:" line instead of "Table:" for drive-in orders.
+1. **Backend Order model**: Add `discount` field (Nat, represents paisa or percentage point), `discountType` (text: "flat" or "percent"), `cancellationReason` (Text), and update `OrderStatus` to include `#cancelled`.
+2. **Backend APIs**: Add `cancelOrder(orderId, reason)`, `updateOrderDiscount(orderId, discount, discountType)`, `updateOrderItems(orderId, items, packingCharge, deliveryCharge)` for editing closed orders.
+3. **IssueBillModal**: Add discount input (flat/%) before grand total. Grand total = itemsTotal + tax + packing + delivery - discount.
+4. **InvoiceListScreen**: Add Edit button per closed order that opens an invoice editor modal. Add reprint with updated totals.
+5. **OrderCard**: Add Cancel button (for pending/preparing) that prompts for cancellation reason.
+6. **SideDrawer / AppView**: Add `reports` view. Wire the existing "Reports" nav item to navigate to the new ReportsScreen. Add "Cancelled Orders" nav entry.
+7. **App.tsx**: Add routes for `reports` and `cancelledOrders` views. Pass discount data through to order placement and bill issuance.
+8. **OrderListScreen**: Add Cancelled tab, show cancellation reason on expanded cancelled orders.
+9. **SettingsPanel**: Add Printer Configuration section with CRUD for up to 4 printers.
 
 ### Remove
-- Nothing removed; drive-in is purely additive.
+- Nothing removed; printer "coming soon" toast replaced with real configuration.
 
 ## Implementation Plan
 
-1. **CustomerOrder.tsx**: Accept a `mode` prop or detect URL param internally. In `drivein` mode: initial screen is a car-icon landing page; clicking the icon shows car details form (plate required, make/color optional); then flows to menu and confirm. In `customer` mode (existing): unchanged table picker flow.
-2. **App.tsx**: Add `isDriveIn` check for `?mode=drivein`; render `<CustomerOrder mode="drivein" />` (or pass prop). Add `openNewOrder` support for type `"driveIn"`.
-3. **NewOrderModal.tsx**: Add `"driveIn"` to order type state; add a third tab; show car details inputs; on submit set `vehicleInfo.model = "DRIVE-IN"` with actual plate/make/color.
-4. **SideDrawer.tsx**: Add Drive-In Order nav item that calls `onOpenNewOrder("driveIn")`.
-5. **OrderCard.tsx**: Helper `isDriveIn(order)` checks `order.vehicleInfo.model === "DRIVE-IN"`; update header label, KOT format.
-6. **IssueBillModal.tsx**: Use same helper to show "Car:" for drive-in.
+1. **Backend (Motoko)**:
+   - Add `#cancelled` to `OrderStatus`
+   - Add `discount: Nat`, `discountType: Text`, `cancellationReason: Text` to `Order` type
+   - Add `cancelOrder(orderId: Nat, reason: Text): async ()`
+   - Add `updateOrderItems(orderId: Nat, items: [OrderItem], packingCharge: Nat, deliveryCharge: Nat): async ()` for editing closed orders
+   - Add `updateOrderDiscount(orderId: Nat, discount: Nat, discountType: Text): async ()`
+   - Update `backend.d.ts` with new types and methods
+
+2. **Frontend — New Components**:
+   - `ReportsScreen.tsx`: Tabbed report viewer with Daily/Weekly/Monthly/Yearly, Tax, Category, User, Floor, Staff sub-reports. Date range picker. Print support.
+   - `PrinterConfigModal.tsx`: CRUD UI for 4 printers with connection type selector (Bluetooth/WiFi/USB/Cloud), IP/port/MAC fields, test print.
+   - `CancelOrderModal.tsx`: Simple modal with reason text input and confirm button.
+   - `InvoiceEditModal.tsx`: Edit closed order items, quantities, charges, discount. Show edit history. Reprint.
+
+3. **Frontend — Modified Components**:
+   - `SideDrawer.tsx`: Wire "Reports" to `reports` view; add "Cancelled Orders" nav item mapping to `cancelledOrders` view.
+   - `App.tsx`: Add `reports` and `cancelledOrders` to `AppView` type and routing.
+   - `OrderCard.tsx`: Add "Cancel" button for pending/preparing, opens `CancelOrderModal`.
+   - `IssueBillModal.tsx`: Add discount field (flat/%), recalculate grand total.
+   - `InvoiceListScreen.tsx`: Add Edit button per row, opens `InvoiceEditModal`. Show discount on rows.
+   - `OrderListScreen.tsx`: Add Cancelled tab; show reason in expanded row for cancelled orders.
+   - `SettingsPanel.tsx`: Add Printer Configuration section.
+   - `backend.ts` / `backend.d.ts`: Reflect new backend types and calls.

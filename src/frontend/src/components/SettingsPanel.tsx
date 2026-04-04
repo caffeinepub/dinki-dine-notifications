@@ -10,6 +10,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -19,13 +28,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ShieldCheck, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, Printer, ShieldCheck, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { backendInterface } from "../backend";
 import { useActor } from "../hooks/useActor";
 
 const PERMISSIONS_KEY = "dinki_role_permissions";
+const PRINTER_CONFIG_KEY = "dinki_printer_config";
 
 const ROLES = [
   "Manager",
@@ -111,6 +121,32 @@ const DEFAULT_PERMISSIONS: PermissionMap = {
   },
 };
 
+type ConnectionType = "Bluetooth" | "WiFi" | "USB" | "Cloud";
+
+interface PrinterSlot {
+  name: string;
+  connectionType: ConnectionType;
+  // Bluetooth
+  macAddress: string;
+  // WiFi
+  ipAddress: string;
+  port: string;
+  // USB
+  portName: string;
+  // Cloud
+  endpointUrl: string;
+}
+
+const DEFAULT_PRINTER: PrinterSlot = {
+  name: "",
+  connectionType: "WiFi",
+  macAddress: "",
+  ipAddress: "",
+  port: "9100",
+  portName: "",
+  endpointUrl: "",
+};
+
 function loadPermissions(): PermissionMap {
   try {
     const data = localStorage.getItem(PERMISSIONS_KEY);
@@ -124,6 +160,21 @@ function savePermissions(perms: PermissionMap) {
   localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(perms));
 }
 
+function loadPrinterConfig(): PrinterSlot[] {
+  try {
+    const data = localStorage.getItem(PRINTER_CONFIG_KEY);
+    if (data) return JSON.parse(data);
+  } catch {}
+  return [1, 2, 3, 4].map((n) => ({
+    ...DEFAULT_PRINTER,
+    name: `Kitchen Printer ${n}`,
+  }));
+}
+
+function savePrinterConfig(config: PrinterSlot[]) {
+  localStorage.setItem(PRINTER_CONFIG_KEY, JSON.stringify(config));
+}
+
 interface SettingsPanelProps {
   onBack: () => void;
 }
@@ -133,6 +184,11 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
   const [permissions, setPermissions] =
     useState<PermissionMap>(loadPermissions);
   const [clearing, setClearing] = useState(false);
+  const [printers, setPrinters] = useState<PrinterSlot[]>(loadPrinterConfig);
+
+  useEffect(() => {
+    setPrinters(loadPrinterConfig());
+  }, []);
 
   const handleToggle = (role: Role, perm: Permission) => {
     setPermissions((prev) => {
@@ -146,6 +202,53 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
       savePermissions(updated);
       return updated;
     });
+  };
+
+  const updatePrinter = (
+    idx: number,
+    field: keyof PrinterSlot,
+    value: string,
+  ) => {
+    setPrinters((prev) => {
+      const updated = prev.map((p, i) =>
+        i === idx ? { ...p, [field]: value } : p,
+      );
+      savePrinterConfig(updated);
+      return updated;
+    });
+  };
+
+  const handleTestPrint = (idx: number) => {
+    const printer = printers[idx];
+    const w = window.open("", "_blank", "width=400,height=300");
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>Test Print - Printer ${idx + 1}</title></head>
+      <body style="font-family:monospace;font-size:12px;padding:20px;max-width:300px;margin:0 auto;text-align:center">
+      <b>DINKI POS - TEST PRINT</b><br/>
+      <br/>
+      Printer: Kitchen ${idx + 1}<br/>
+      Name: ${printer.name || "(unnamed)"}<br/>
+      Type: ${printer.connectionType}<br/>
+      ${
+        printer.connectionType === "Bluetooth"
+          ? `MAC: ${printer.macAddress || "(not set)"}`
+          : printer.connectionType === "WiFi"
+            ? `IP: ${printer.ipAddress || "(not set)"}:${printer.port || "9100"}`
+            : printer.connectionType === "USB"
+              ? `Port: ${printer.portName || "(not set)"}`
+              : `URL: ${printer.endpointUrl || "(not set)"}`
+      }<br/>
+      <br/>
+      <hr/>
+      This is a test page.<br/>
+      If you see this, the printer config is set.<br/>
+      <hr/>
+      </body></html>
+    `);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
   };
 
   const handleClearAllData = async () => {
@@ -193,7 +296,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
       </div>
 
       <div className="flex-1 p-4 max-w-4xl mx-auto w-full space-y-8">
-        {/* ── Clear All Data ── */}
+        {/* \u2500\u2500 Clear All Data \u2500\u2500 */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Trash2 className="w-4 h-4 text-din-red" />
@@ -253,7 +356,172 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
           </div>
         </section>
 
-        {/* ── User Permissions ── */}
+        {/* \u2500\u2500 Printer Configuration \u2500\u2500 */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Printer className="w-4 h-4 text-din-teal" />
+            <h2 className="text-sm font-bold text-din-text">
+              Printer Configuration
+            </h2>
+          </div>
+          <p className="text-xs text-din-muted mb-4">
+            Configure up to 4 kitchen printers. Settings are saved locally.
+          </p>
+          <div className="space-y-4">
+            {printers.map((printer, idx) => (
+              <div
+                key={printer.name || `K${idx + 1}`}
+                data-ocid={`settings.row.${idx + 1}`}
+                className="bg-din-surface-alt border border-din-border rounded-lg p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-din-teal">
+                    Kitchen Printer {idx + 1}
+                  </span>
+                  <Button
+                    data-ocid={`settings.primary_button.${idx + 1}`}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleTestPrint(idx)}
+                    className="h-6 px-2 text-[10px] border-din-border text-din-muted hover:bg-din-surface"
+                  >
+                    <Printer className="w-3 h-3 mr-1" />
+                    Test Print
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-din-muted">
+                      Printer Name
+                    </Label>
+                    <Input
+                      data-ocid={`settings.input.${idx + 1}`}
+                      value={printer.name}
+                      onChange={(e) =>
+                        updatePrinter(idx, "name", e.target.value)
+                      }
+                      placeholder={`Kitchen Printer ${idx + 1}`}
+                      className="h-7 text-xs bg-din-surface border-din-border text-din-text"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-din-muted">
+                      Connection Type
+                    </Label>
+                    <Select
+                      value={printer.connectionType}
+                      onValueChange={(v) =>
+                        updatePrinter(idx, "connectionType", v)
+                      }
+                    >
+                      <SelectTrigger
+                        data-ocid={`settings.select.${idx + 1}`}
+                        className="h-7 text-xs bg-din-surface border-din-border text-din-text"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-din-surface border-din-border text-din-text">
+                        <SelectItem value="Bluetooth" className="text-xs">
+                          Bluetooth
+                        </SelectItem>
+                        <SelectItem value="WiFi" className="text-xs">
+                          WiFi
+                        </SelectItem>
+                        <SelectItem value="USB" className="text-xs">
+                          USB
+                        </SelectItem>
+                        <SelectItem value="Cloud" className="text-xs">
+                          Cloud
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Connection-specific fields */}
+                {printer.connectionType === "Bluetooth" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-din-muted">
+                      MAC Address
+                    </Label>
+                    <Input
+                      data-ocid={`settings.input.${idx + 1}`}
+                      value={printer.macAddress}
+                      onChange={(e) =>
+                        updatePrinter(idx, "macAddress", e.target.value)
+                      }
+                      placeholder="00:11:22:33:44:55"
+                      className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                    />
+                  </div>
+                )}
+                {printer.connectionType === "WiFi" && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs text-din-muted">
+                        IP Address
+                      </Label>
+                      <Input
+                        data-ocid={`settings.input.${idx + 1}`}
+                        value={printer.ipAddress}
+                        onChange={(e) =>
+                          updatePrinter(idx, "ipAddress", e.target.value)
+                        }
+                        placeholder="192.168.1.100"
+                        className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-din-muted">Port</Label>
+                      <Input
+                        data-ocid={`settings.input.${idx + 1}`}
+                        value={printer.port}
+                        onChange={(e) =>
+                          updatePrinter(idx, "port", e.target.value)
+                        }
+                        placeholder="9100"
+                        className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
+                {printer.connectionType === "USB" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-din-muted">Port Name</Label>
+                    <Input
+                      data-ocid={`settings.input.${idx + 1}`}
+                      value={printer.portName}
+                      onChange={(e) =>
+                        updatePrinter(idx, "portName", e.target.value)
+                      }
+                      placeholder="/dev/usb/lp0 or COM3"
+                      className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                    />
+                  </div>
+                )}
+                {printer.connectionType === "Cloud" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-din-muted">
+                      Endpoint URL
+                    </Label>
+                    <Input
+                      data-ocid={`settings.input.${idx + 1}`}
+                      value={printer.endpointUrl}
+                      onChange={(e) =>
+                        updatePrinter(idx, "endpointUrl", e.target.value)
+                      }
+                      placeholder="https://printer.example.com/print"
+                      className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* \u2500\u2500 User Permissions \u2500\u2500 */}
         <section>
           <div className="flex items-center gap-2 mb-3">
             <ShieldCheck className="w-4 h-4 text-din-teal" />
@@ -286,7 +554,7 @@ export function SettingsPanel({ onBack }: SettingsPanelProps) {
                 {ROLES.map((role, ri) => (
                   <TableRow
                     key={role}
-                    data-ocid={`settings.row.${ri + 1}`}
+                    data-ocid={`settings.row.${ri + 5}`}
                     className="border-din-border hover:bg-din-surface-alt/30"
                   >
                     <TableCell className="text-xs font-semibold text-din-text">

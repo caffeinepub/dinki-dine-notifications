@@ -436,6 +436,8 @@ export function NewOrderModal({
       customerMobile: customerPhone.trim(),
       timestamp: BigInt(Date.now()) * 1_000_000n,
       items,
+      discount: 0n,
+      discountType: "flat",
     };
 
     setIsSubmitting(true);
