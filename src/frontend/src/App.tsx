@@ -158,6 +158,8 @@ function StaffDashboard() {
 
   const seenNotifIds = useRef<Set<string>>(new Set());
   const notificationsRef = useRef<Notification[]>([]);
+  // Track locally closed/cancelled orders so polling never re-shows them
+  const closedOrderIds = useRef<Set<string>>(new Set());
   const unacknowledgedCount = notifications.filter(
     (n) => !n.acknowledged,
   ).length;
@@ -185,7 +187,8 @@ function StaffDashboard() {
         sortedAll.filter(
           (o) =>
             o.status !== OrderStatus.fulfilled &&
-            o.status !== OrderStatus.cancelled,
+            o.status !== OrderStatus.cancelled &&
+            !closedOrderIds.current.has(o.id.toString()),
         ),
       );
 
@@ -229,6 +232,7 @@ function StaffDashboard() {
 
       // Optimistic update on liveOrders: remove fulfilled orders immediately
       if (status === OrderStatus.fulfilled) {
+        closedOrderIds.current.add(orderId.toString());
         setLiveOrders((prev) => prev.filter((o) => o.id !== orderId));
       } else {
         setLiveOrders((prev) =>
@@ -317,6 +321,7 @@ function StaffDashboard() {
   };
 
   const handleCancelOrder = async (orderId: bigint, reason: string) => {
+    closedOrderIds.current.add(orderId.toString());
     if (!actor) return;
     await actor.cancelOrder(orderId, reason);
     await fetchData();
