@@ -479,12 +479,15 @@ export function NewOrderModal({
 
         <div className="space-y-4 py-2">
           {/* Order type toggle */}
-          <div className="w-full flex rounded-lg overflow-hidden border border-din-border">
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}
+            className="w-full rounded-lg overflow-hidden border border-din-border"
+          >
             <button
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("dineIn")}
-              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors ${
+              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors ${
                 orderType === "dineIn"
                   ? "bg-din-teal/20 text-din-teal"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
@@ -499,7 +502,7 @@ export function NewOrderModal({
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("takeAway")}
-              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "takeAway"
                   ? "bg-din-orange/20 text-din-orange"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"
@@ -514,7 +517,7 @@ export function NewOrderModal({
               type="button"
               data-ocid="new_order.toggle"
               onClick={() => setOrderType("driveIn")}
-              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
+              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-xs font-semibold transition-colors border-l border-din-border ${
                 orderType === "driveIn"
                   ? "bg-yellow-400/20 text-yellow-400"
                   : "bg-din-surface-alt text-din-muted hover:text-din-text"

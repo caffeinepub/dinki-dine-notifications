@@ -7,10 +7,10 @@ import Int "mo:core/Int";
 import Order "mo:core/Order";
 import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
-import Migration "migration";
+
 import List "mo:core/List";
 
-(with migration = Migration.run)
+
 actor {
   public type Timestamp = Time.Time;
 

@@ -1,71 +1,61 @@
 # Dinki Pos
 
 ## Current State
-
-The app is a full-stack restaurant POS supporting Dine-In, Takeaway, and Drive-In modes. Backend uses Motoko with orders, notifications, and menu items stored in Maps. Frontend is React/TypeScript with components for: OrderCard, NewOrderModal, IssueBillModal, MenuAdmin, InvoiceListScreen, OrderListScreen, DayEndReport, SummaryOfDay, UserManagement, SettingsPanel, SideDrawer, TableGridView.
-
-Current Order model: id, vehicleInfo (licensePlate, make, model, color), customerMobile, items (name, price, quantity), timestamp, status (pending/preparing/ready/fulfilled).
-
-Reports: Day-end report (printable), Summary of Day. Order List shows all orders with status filter. Invoice List shows fulfilled orders with print.
-
-No cancellation system, no discount support, no printer configuration, no advanced reporting (daily/weekly/monthly/yearly breakdown, tax reports, category/user/floor/staff-wise sales), no invoice editing for closed orders.
+- Version 30 is live with Drive-In, Dine-In, Takeaway support
+- Live Orders page filters out fulfilled/cancelled orders via `liveOrders` state
+- `handleUpdateStatus` does optimistic removal of fulfilled orders from `liveOrders`
+- New Order modal has 3 tabs: Dine In, Take Away, Drive In — all equal flex-1 width
+- CustomerOrder component handles `?mode=customer` (table) and `?mode=drivein` (car) URL modes
+- No unified customer self-ordering page exists
+- No Drive-In menu-only display page exists
+- App URL: `https://dinki-dine-drive-in-pos-v3v.caffeine.xyz`
 
 ## Requested Changes (Diff)
 
 ### Add
-1. **Closed Order Edit/Backup**: From Invoice List, allow editing a closed/fulfilled order — modify items, quantities, charges, discount; reprint invoice. Store edit history as backup.
-2. **Invoice Editing**: Edit issued invoices — adjust items, add/remove items, change packing/delivery charges, apply discount. Show edit history.
-3. **Reports Module** (new ReportsScreen component with sub-tabs):
-   - Daily / Weekly / Monthly / Yearly revenue reports with date range selector
-   - Tax Report: SGST + CGST breakdown by day/week/month/year
-   - Category-wise Sales Report: revenue and quantity per menu category
-   - User Sales Report: orders placed per staff user
-   - Floor-wise Sales Report: revenue per floor section (DG, DM, SG, SM, FF, FFD)
-   - Staff-wise Sales Report: revenue attributed to each staff member
-4. **Printer Configuration**: Settings screen section for configuring up to 4 printers — name, connection type (Bluetooth, WiFi, USB, Cloud), IP address/MAC/port, test print button. Stored in localStorage.
-5. **Order List Enhancements**:
-   - Separate tabs: All Orders / Cancelled Orders / Cancelled Order Summary
-   - Reason for cancellation field when cancelling an order
-   - Cancelled Order Summary: count, total value, reasons breakdown
-6. **Discount on Order Total**: In IssueBillModal and closed order editor — allow entering a flat (₹) or percentage (%) discount on the order total before grand total. Discount applied after tax, before final total. Stored on the order.
-7. **Cancel Order**: Button on OrderCard for pending/preparing orders to cancel with a reason. Updates order status to #cancelled in backend.
+1. **Drive-In Menu-Only Display Page** (`?mode=menuonly`)
+   - Shows available menu items grouped by category with time-based schedule
+   - Read-only display — no ordering, no cart, no form
+   - Shows Dinki Pos branding with Car icon
+   - QR code and link for this page displayed in Settings/QR section so staff can print it
+   - Accessible via Settings drawer: "Drive-In QR" section
+
+2. **Unified Customer Self-Ordering Page** (`?mode=order`)
+   - Single page with three sections/tabs: Drive-In, Takeaway, Online Delivery
+   - Each section has its own format:
+     - **Drive-In**: Car plate + make + color form → menu → place order (model=DRIVE-IN)
+     - **Takeaway**: Name + phone form → menu → place order (TAKEAWAY prefix)
+     - **Online Delivery**: Name + phone + address form → menu → place order (DELIVERY prefix)
+   - QR code + shareable link for this page shown in Settings/QR section
+   - Each order type is clearly visually separated
+   - All sections show available menu items (time-scheduled) from backend
+
+3. **QR Codes Section in Settings**
+   - Add a "QR Codes & Links" section in the Settings panel or as a drawer menu item
+   - Shows 3 QR codes with labels and copy link buttons:
+     - Dine-In customer ordering: `?mode=customer`
+     - Drive-In self-ordering: `?mode=drivein`
+     - Drive-In menu only: `?mode=menuonly`
+     - Unified self-ordering: `?mode=order`
+   - QR codes generated using a simple SVG/canvas QR library or inline generation
 
 ### Modify
-1. **Backend Order model**: Add `discount` field (Nat, represents paisa or percentage point), `discountType` (text: "flat" or "percent"), `cancellationReason` (Text), and update `OrderStatus` to include `#cancelled`.
-2. **Backend APIs**: Add `cancelOrder(orderId, reason)`, `updateOrderDiscount(orderId, discount, discountType)`, `updateOrderItems(orderId, items, packingCharge, deliveryCharge)` for editing closed orders.
-3. **IssueBillModal**: Add discount input (flat/%) before grand total. Grand total = itemsTotal + tax + packing + delivery - discount.
-4. **InvoiceListScreen**: Add Edit button per closed order that opens an invoice editor modal. Add reprint with updated totals.
-5. **OrderCard**: Add Cancel button (for pending/preparing) that prompts for cancellation reason.
-6. **SideDrawer / AppView**: Add `reports` view. Wire the existing "Reports" nav item to navigate to the new ReportsScreen. Add "Cancelled Orders" nav entry.
-7. **App.tsx**: Add routes for `reports` and `cancelledOrders` views. Pass discount data through to order placement and bill issuance.
-8. **OrderListScreen**: Add Cancelled tab, show cancellation reason on expanded cancelled orders.
-9. **SettingsPanel**: Add Printer Configuration section with CRUD for up to 4 printers.
+1. **Live Orders page filter**: Ensure `filteredOrders` absolutely never includes fulfilled or cancelled orders. Add explicit double-filter at render time as safety net.
+2. **New Order modal Drive-In tab**: Force tab container to use `display: flex` with `min-width: 0` and ensure each button has `width: 33.33%` not just `flex-1`. Add `overflow: hidden` protection.
+3. **App.tsx mode routing**: Add `?mode=menuonly` and `?mode=order` routes.
 
 ### Remove
-- Nothing removed; printer "coming soon" toast replaced with real configuration.
+- Nothing removed
 
 ## Implementation Plan
-
-1. **Backend (Motoko)**:
-   - Add `#cancelled` to `OrderStatus`
-   - Add `discount: Nat`, `discountType: Text`, `cancellationReason: Text` to `Order` type
-   - Add `cancelOrder(orderId: Nat, reason: Text): async ()`
-   - Add `updateOrderItems(orderId: Nat, items: [OrderItem], packingCharge: Nat, deliveryCharge: Nat): async ()` for editing closed orders
-   - Add `updateOrderDiscount(orderId: Nat, discount: Nat, discountType: Text): async ()`
-   - Update `backend.d.ts` with new types and methods
-
-2. **Frontend — New Components**:
-   - `ReportsScreen.tsx`: Tabbed report viewer with Daily/Weekly/Monthly/Yearly, Tax, Category, User, Floor, Staff sub-reports. Date range picker. Print support.
-   - `PrinterConfigModal.tsx`: CRUD UI for 4 printers with connection type selector (Bluetooth/WiFi/USB/Cloud), IP/port/MAC fields, test print.
-   - `CancelOrderModal.tsx`: Simple modal with reason text input and confirm button.
-   - `InvoiceEditModal.tsx`: Edit closed order items, quantities, charges, discount. Show edit history. Reprint.
-
-3. **Frontend — Modified Components**:
-   - `SideDrawer.tsx`: Wire "Reports" to `reports` view; add "Cancelled Orders" nav item mapping to `cancelledOrders` view.
-   - `App.tsx`: Add `reports` and `cancelledOrders` to `AppView` type and routing.
-   - `OrderCard.tsx`: Add "Cancel" button for pending/preparing, opens `CancelOrderModal`.
-   - `IssueBillModal.tsx`: Add discount field (flat/%), recalculate grand total.
-   - `InvoiceListScreen.tsx`: Add Edit button per row, opens `InvoiceEditModal`. Show discount on rows.
-   - `OrderListScreen.tsx`: Add Cancelled tab; show reason in expanded row for cancelled orders.
-   - `SettingsPanel.tsx`: Add Printer Configuration section.
-   - `backend.ts` / `backend.d.ts`: Reflect new backend types and calls.
+1. Create `CustomerOrderUnified.tsx` — new unified self-ordering page with Drive-In / Takeaway / Online Delivery tabs, each with their own form + menu + checkout flow
+2. Create `DriveInMenuDisplay.tsx` — read-only menu display for Drive-In QR code page
+3. Update `App.tsx`:
+   - Add mode checks for `menuonly` → `<DriveInMenuDisplay />` and `order` → `<CustomerOrderUnified />`
+   - Add double-filter safety net to `filteredOrders` to guarantee no fulfilled/cancelled
+4. Update `NewOrderModal.tsx`:
+   - Replace `flex-1` with explicit `w-1/3` and `min-w-0` on tab buttons
+   - Add `style={{minWidth: 0, width: '33.333%'}}` inline to guarantee equal sizing
+5. Create/Update `QRCodesPanel.tsx` or add QR section to `SettingsPanel.tsx`:
+   - Show QR codes for all customer-facing URLs using a QR code generator
+   - Add to SideDrawer navigation

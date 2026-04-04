@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   LayoutDashboard,
+  QrCode,
   Receipt,
   Settings,
   ShoppingBag,
@@ -24,7 +25,8 @@ export type AppView =
   | "dayEndReport"
   | "settings"
   | "reports"
-  | "cancelledOrders";
+  | "cancelledOrders"
+  | "qrcodes";
 
 interface NavItem {
   label: string;
@@ -84,6 +86,12 @@ export function SideDrawer({
         onOpenNewOrder("driveIn");
         onClose();
       },
+    },
+    {
+      label: "QR Codes & Links",
+      icon: <QrCode className="w-4 h-4" />,
+      action: () => navigate("qrcodes"),
+      view: "qrcodes",
     },
     {
       label: "Kitchen 1",

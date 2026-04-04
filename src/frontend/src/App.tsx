@@ -25,7 +25,9 @@ import type { Notification, Order, OrderInput, OrderItem } from "./backend";
 import { OrderStatus } from "./backend";
 import { AdminPinGate } from "./components/AdminPinGate";
 import { CustomerOrder } from "./components/CustomerOrder";
+import { CustomerOrderUnified } from "./components/CustomerOrderUnified";
 import { DayEndReport } from "./components/DayEndReport";
+import { DriveInMenuDisplay } from "./components/DriveInMenuDisplay";
 import { InvoiceListScreen } from "./components/InvoiceListScreen";
 import { KpiCard } from "./components/KpiCard";
 import { MenuAdmin } from "./components/MenuAdmin";
@@ -33,6 +35,7 @@ import { NewOrderModal } from "./components/NewOrderModal";
 import { NotificationItem } from "./components/NotificationItem";
 import { OrderCard } from "./components/OrderCard";
 import { OrderListScreen } from "./components/OrderListScreen";
+import { QRCodesPanel } from "./components/QRCodesPanel";
 import { ReportsScreen } from "./components/ReportsScreen";
 import { SettingsPanel } from "./components/SettingsPanel";
 import type { AppView } from "./components/SideDrawer";
@@ -48,6 +51,10 @@ const isCustomerMode =
   new URLSearchParams(window.location.search).get("mode") === "customer";
 const isDriveInMode =
   new URLSearchParams(window.location.search).get("mode") === "drivein";
+const isMenuOnlyMode =
+  new URLSearchParams(window.location.search).get("mode") === "menuonly";
+const isUnifiedOrderMode =
+  new URLSearchParams(window.location.search).get("mode") === "order";
 
 export default function App() {
   if (isCustomerMode) {
@@ -55,6 +62,12 @@ export default function App() {
   }
   if (isDriveInMode) {
     return <CustomerOrder mode="drivein" />;
+  }
+  if (isMenuOnlyMode) {
+    return <DriveInMenuDisplay />;
+  }
+  if (isUnifiedOrderMode) {
+    return <CustomerOrderUnified />;
   }
   return (
     <AdminPinGate>
@@ -343,7 +356,10 @@ function StaffDashboard() {
 
   // Main page: show only live (non-fulfilled) orders, filtered by status pill
   const filteredOrders = liveOrders.filter(
-    (o) => filter === "all" || o.status === filter,
+    (o) =>
+      o.status !== OrderStatus.fulfilled &&
+      o.status !== OrderStatus.cancelled &&
+      (filter === "all" || o.status === filter),
   );
 
   // Table grid view: only open/active orders
@@ -618,6 +634,15 @@ function StaffDashboard() {
           onBack={() => setCurrentView("dashboard")}
           defaultFilter="cancelled"
         />
+      </>
+    );
+  }
+
+  if (currentView === "qrcodes") {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <QRCodesPanel onBack={() => setCurrentView("dashboard")} />
       </>
     );
   }
