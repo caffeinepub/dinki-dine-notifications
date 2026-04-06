@@ -1,61 +1,28 @@
 # Dinki Pos
 
 ## Current State
-- Version 30 is live with Drive-In, Dine-In, Takeaway support
-- Live Orders page filters out fulfilled/cancelled orders via `liveOrders` state
-- `handleUpdateStatus` does optimistic removal of fulfilled orders from `liveOrders`
-- New Order modal has 3 tabs: Dine In, Take Away, Drive In — all equal flex-1 width
-- CustomerOrder component handles `?mode=customer` (table) and `?mode=drivein` (car) URL modes
-- No unified customer self-ordering page exists
-- No Drive-In menu-only display page exists
-- App URL: `https://dinki-dine-drive-in-pos-v3v.caffeine.xyz`
+- CustomerOrder (?mode=customer, ?mode=drivein): Two-step flow — first screen is table/car form, second screen is the menu. Customers must submit the form before seeing any menu items.
+- CustomerOrderUnified (?mode=order): Same two-step flow — form first, then 'View Menu' reveals the menu on a separate screen.
+- MenuAdmin: PIN-protected menu editing is fully functional for staff/admin. No restriction exists in customer-facing modes.
+- Notification/ringtone: useSound hook plays a beep on the staff dashboard only when unacknowledgedCount > 0. Customer ordering pages do NOT trigger any ringtone on staff devices.
 
 ## Requested Changes (Diff)
 
 ### Add
-1. **Drive-In Menu-Only Display Page** (`?mode=menuonly`)
-   - Shows available menu items grouped by category with time-based schedule
-   - Read-only display — no ordering, no cart, no form
-   - Shows Dinki Pos branding with Car icon
-   - QR code and link for this page displayed in Settings/QR section so staff can print it
-   - Accessible via Settings drawer: "Drive-In QR" section
-
-2. **Unified Customer Self-Ordering Page** (`?mode=order`)
-   - Single page with three sections/tabs: Drive-In, Takeaway, Online Delivery
-   - Each section has its own format:
-     - **Drive-In**: Car plate + make + color form → menu → place order (model=DRIVE-IN)
-     - **Takeaway**: Name + phone form → menu → place order (TAKEAWAY prefix)
-     - **Online Delivery**: Name + phone + address form → menu → place order (DELIVERY prefix)
-   - QR code + shareable link for this page shown in Settings/QR section
-   - Each order type is clearly visually separated
-   - All sections show available menu items (time-scheduled) from backend
-
-3. **QR Codes Section in Settings**
-   - Add a "QR Codes & Links" section in the Settings panel or as a drawer menu item
-   - Shows 3 QR codes with labels and copy link buttons:
-     - Dine-In customer ordering: `?mode=customer`
-     - Drive-In self-ordering: `?mode=drivein`
-     - Drive-In menu only: `?mode=menuonly`
-     - Unified self-ordering: `?mode=order`
-   - QR codes generated using a simple SVG/canvas QR library or inline generation
+- Customer landing page: show the ordering form AND the menu side-by-side (or stacked on mobile) on the very first screen. Customers fill in their details at the top and can immediately browse the menu below without a separate 'View Menu' step.
+- Notification ringtone on order-receiving devices: when a customer places an order, the staff dashboard's polling (every 3 seconds) will detect the new order. The existing useSound ringtone already fires when unacknowledgedCount > 0. Ensure notifications are created and unacknowledged on every new customer order so the ringtone triggers reliably on all logged-in staff devices.
 
 ### Modify
-1. **Live Orders page filter**: Ensure `filteredOrders` absolutely never includes fulfilled or cancelled orders. Add explicit double-filter at render time as safety net.
-2. **New Order modal Drive-In tab**: Force tab container to use `display: flex` with `min-width: 0` and ensure each button has `width: 33.33%` not just `flex-1`. Add `overflow: hidden` protection.
-3. **App.tsx mode routing**: Add `?mode=menuonly` and `?mode=order` routes.
+- CustomerOrder (?mode=customer and ?mode=drivein): Change from 2-step (form → menu) to single-page layout. Form fields appear at top, menu appears below in the same scroll. Place Order button remains at bottom as floating cart bar. Validation still requires table/car number before placing order (show inline error if they try to place without filling in details).
+- CustomerOrderUnified (?mode=order): Same change — form fields at top of each tab, menu scrollable below. Remove separate 'form' screen state. The 'View Menu' button becomes redundant and is removed. Cart/Place Order still validates the form fields on submit.
+- MenuAdmin: Remove any menu editing access from customer-facing pages. MenuAdmin is already only shown in the staff dashboard (AdminPinGate), so no change needed there — just confirm customer modes never expose it.
 
 ### Remove
-- Nothing removed
+- 'View Menu' / 'Start Ordering' step-change buttons from customer flows (menu is shown immediately on landing)
+- The separate 'form' screen state in CustomerOrderUnified
 
 ## Implementation Plan
-1. Create `CustomerOrderUnified.tsx` — new unified self-ordering page with Drive-In / Takeaway / Online Delivery tabs, each with their own form + menu + checkout flow
-2. Create `DriveInMenuDisplay.tsx` — read-only menu display for Drive-In QR code page
-3. Update `App.tsx`:
-   - Add mode checks for `menuonly` → `<DriveInMenuDisplay />` and `order` → `<CustomerOrderUnified />`
-   - Add double-filter safety net to `filteredOrders` to guarantee no fulfilled/cancelled
-4. Update `NewOrderModal.tsx`:
-   - Replace `flex-1` with explicit `w-1/3` and `min-w-0` on tab buttons
-   - Add `style={{minWidth: 0, width: '33.333%'}}` inline to guarantee equal sizing
-5. Create/Update `QRCodesPanel.tsx` or add QR section to `SettingsPanel.tsx`:
-   - Show QR codes for all customer-facing URLs using a QR code generator
-   - Add to SideDrawer navigation
+1. Refactor CustomerOrder component: remove screen state 'car'/'menu' split; load menu on mount; render form fields in a card at top, then menu items below; floating cart validates form on Place Order instead of on navigation.
+2. Refactor CustomerOrderUnified component: remove screen='form' state; load menu on mount; render tab-specific form fields pinned to top, then scrollable menu below; floating cart validates on Place Order.
+3. Confirm MenuAdmin is never accessible from customer mode pages (it is behind AdminPinGate — no change needed, just verify).
+4. Sound/ringtone: the existing useSound already triggers on unacknowledgedCount > 0. Ensure backend placeOrder creates a notification entry that gets picked up by the staff dashboard polling. This is already in place per the backend design. No additional code change needed unless testing reveals the notification is not being created on customer self-orders.

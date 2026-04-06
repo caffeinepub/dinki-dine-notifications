@@ -612,7 +612,11 @@ function StaffDashboard() {
     return (
       <>
         <Toaster position="top-right" theme="dark" />
-        <SettingsPanel onBack={() => setCurrentView("dashboard")} />
+        <SettingsPanel
+          onBack={() => setCurrentView("dashboard")}
+          orders={allOrders}
+          onEditOrder={handleEditOrder}
+        />
       </>
     );
   }

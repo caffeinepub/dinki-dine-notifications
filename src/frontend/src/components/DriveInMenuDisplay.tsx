@@ -5,71 +5,69 @@ import { useEffect, useMemo, useState } from "react";
 import { useActor } from "../hooks/useActor";
 import type { MenuActor, MenuItem } from "../types/menu";
 
-// ── Schedule definitions ──────────────────────────────────────────────────────
-const SCHEDULES: Record<
+// ── Schedule definitions (read from localStorage if set by MenuAdmin) ──────────
+const DEFAULT_DRIVEIN_SLOTS: Record<
   string,
-  { label: string; check: (h: number, m: number) => boolean }
+  { start: [number, number]; end: [number, number] }[]
 > = {
-  "Hot n Hot": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  Dosa: {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  Breakfast: { label: "07:00 – 12:00", check: (h) => h >= 7 && h < 12 },
-  Chaat: {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Ice cream novelties": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Ice cream cups n packs": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Juice n Shakes": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  Soup: {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  Starter: {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Roti (Bread)": {
-    label: "11:30–15:30 & 19:00–22:30",
-    check: (h, m) => {
-      const t = h * 60 + m;
-      return (
-        (t >= 11 * 60 + 30 && t <= 15 * 60 + 30) ||
-        (t >= 19 * 60 && t <= 22 * 60 + 30)
-      );
-    },
-  },
-  "Main course": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Rice n Noodles": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  Softdrinks: {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
-  "Grill n spice": {
-    label: "09:00 – 23:00",
-    check: (h, m) => h * 60 + m >= 9 * 60 && h * 60 + m <= 23 * 60,
-  },
+  "Hot n Hot": [{ start: [9, 0], end: [23, 0] }],
+  Dosa: [{ start: [9, 0], end: [23, 0] }],
+  Breakfast: [{ start: [7, 0], end: [12, 0] }],
+  Chaat: [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream novelties": [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream cups n packs": [{ start: [9, 0], end: [23, 0] }],
+  "Juice n Shakes": [{ start: [9, 0], end: [23, 0] }],
+  Soup: [{ start: [9, 0], end: [23, 0] }],
+  Starter: [{ start: [9, 0], end: [23, 0] }],
+  "Roti (Bread)": [
+    { start: [11, 30], end: [15, 30] },
+    { start: [19, 0], end: [22, 30] },
+  ],
+  "Main course": [{ start: [9, 0], end: [23, 0] }],
+  "Rice n Noodles": [{ start: [9, 0], end: [23, 0] }],
+  Softdrinks: [{ start: [9, 0], end: [23, 0] }],
+  "Grill n spice": [{ start: [9, 0], end: [23, 0] }],
 };
+
+function getDriveInCategorySlots(): Record<
+  string,
+  { start: [number, number]; end: [number, number] }[]
+> {
+  try {
+    const data = localStorage.getItem("dinki_category_timing");
+    if (data) return { ...DEFAULT_DRIVEIN_SLOTS, ...JSON.parse(data) };
+  } catch {}
+  return DEFAULT_DRIVEIN_SLOTS;
+}
+
+function isDriveInCategoryAvailable(
+  category: string,
+  h: number,
+  m: number,
+): boolean {
+  const slots = getDriveInCategorySlots();
+  const catSlots = slots[category];
+  if (!catSlots || catSlots.length === 0) return true;
+  const t = h * 60 + m;
+  return catSlots.some(
+    (s) => t >= s.start[0] * 60 + s.start[1] && t < s.end[0] * 60 + s.end[1],
+  );
+}
+
+function getDriveInCategoryLabel(category: string): string {
+  const slots = getDriveInCategorySlots();
+  const catSlots = slots[category];
+  if (!catSlots || catSlots.length === 0) return "All day";
+  return catSlots
+    .map((s) => {
+      const sh = String(s.start[0]).padStart(2, "0");
+      const sm = String(s.start[1]).padStart(2, "0");
+      const eh = String(s.end[0]).padStart(2, "0");
+      const em = String(s.end[1]).padStart(2, "0");
+      return `${sh}:${sm}–${eh}:${em}`;
+    })
+    .join(" & ");
+}
 
 const CATEGORY_ACCENT: Record<string, string> = {
   "Hot n Hot": "bg-red-50 text-red-700 border-red-200",
@@ -116,10 +114,7 @@ export function DriveInMenuDisplay() {
     const m = now.getMinutes();
     const available = menuItems.filter(
       (item) =>
-        item.available &&
-        (SCHEDULES[item.category]
-          ? SCHEDULES[item.category].check(h, m)
-          : true),
+        item.available && isDriveInCategoryAvailable(item.category, h, m),
     );
     const groups: Record<string, MenuItem[]> = {};
     for (const item of available) {
@@ -205,14 +200,12 @@ export function DriveInMenuDisplay() {
                   }`}
                 >
                   <span>{category}</span>
-                  {SCHEDULES[category] && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] bg-white/60 border-current/20 text-inherit"
-                    >
-                      {SCHEDULES[category].label}
-                    </Badge>
-                  )}
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-white/60 border-current/20 text-inherit"
+                  >
+                    {getDriveInCategoryLabel(category)}
+                  </Badge>
                 </div>
 
                 {/* Items Grid */}
