@@ -114,10 +114,10 @@ actor {
     discountType : Text;
   };
 
-  var nextOrderId = 1;
-  var nextNotificationId = 1;
-  var nextMenuItemId = 1;
-  var menuSeeded = false;
+  stable var nextOrderId = 1;
+  stable var nextNotificationId = 1;
+  stable var nextMenuItemId = 1;
+  stable var menuSeeded = false;
 
   let orders = Map.empty<Nat, Order>();
   let notifications = Map.empty<Nat, Notification>();
@@ -451,6 +451,6 @@ actor {
   public shared func clearAllData() : async () {
     await clearAllOrders();
     await clearAllNotifications();
-    await resetMenuToDefaults();
+
   };
 };

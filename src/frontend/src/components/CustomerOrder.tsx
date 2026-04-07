@@ -345,10 +345,13 @@ export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
         <div
           ref={formRef}
           data-ocid="customer.panel"
-          className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5"
+          className={`bg-white rounded-2xl shadow-md border-2 p-4 mb-5 ${mode === "drivein" ? "border-amber-200" : "border-orange-200"}`}
         >
           {mode === "drivein" ? (
             <>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                Step 1 — Enter Car Details
+              </p>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
                   <Car className="w-4 h-4 text-amber-600" />
@@ -427,6 +430,9 @@ export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
             </>
           ) : (
             <>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                Step 1 — Select Your Table
+              </p>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
                   <Utensils className="w-4 h-4 text-cust-primary" />
@@ -471,7 +477,7 @@ export function CustomerOrder({ mode = "customer" }: CustomerOrderProps) {
           <div className="flex items-center gap-2 mb-3">
             <Utensils className="w-4 h-4 text-cust-primary" />
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-              Our Menu
+              Step 2 — Choose Your Items
             </h2>
           </div>
 

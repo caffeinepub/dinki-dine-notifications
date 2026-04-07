@@ -457,6 +457,9 @@ export function CustomerOrderUnified() {
           data-ocid="unified_order.panel"
           className={`bg-white rounded-2xl shadow-sm border p-4 mb-5 ${cfg.borderClass}`}
         >
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+            Step 1 — Your Details
+          </p>
           {/* Tab identity banner */}
           <div className="flex items-center gap-3 mb-4">
             <div
@@ -721,7 +724,7 @@ export function CustomerOrderUnified() {
           <div className="flex items-center gap-2 mb-3">
             <Utensils className="w-4 h-4 text-orange-500" />
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-              Our Menu
+              Step 2 — Choose Your Items
             </h2>
           </div>
 

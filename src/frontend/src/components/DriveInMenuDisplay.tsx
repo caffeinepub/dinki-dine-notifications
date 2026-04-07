@@ -1,12 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, Clock, Utensils } from "lucide-react";
+import { Clock, Utensils } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useActor } from "../hooks/useActor";
 import type { MenuActor, MenuItem } from "../types/menu";
 
 // ── Schedule definitions (read from localStorage if set by MenuAdmin) ──────────
-const DEFAULT_DRIVEIN_SLOTS: Record<
+const DEFAULT_SLOTS: Record<
   string,
   { start: [number, number]; end: [number, number] }[]
 > = {
@@ -35,9 +35,9 @@ function getDriveInCategorySlots(): Record<
 > {
   try {
     const data = localStorage.getItem("dinki_category_timing");
-    if (data) return { ...DEFAULT_DRIVEIN_SLOTS, ...JSON.parse(data) };
+    if (data) return { ...DEFAULT_SLOTS, ...JSON.parse(data) };
   } catch {}
-  return DEFAULT_DRIVEIN_SLOTS;
+  return DEFAULT_SLOTS;
 }
 
 function isDriveInCategoryAvailable(
@@ -136,15 +136,18 @@ export function DriveInMenuDisplay() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
-            <Car className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center flex-shrink-0">
+            <Utensils className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 leading-none">
               Dinki Pos
             </p>
-            <p className="text-xs text-gray-500">Drive-In Menu</p>
+            <p className="text-xs text-gray-500">Menu</p>
           </div>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200 uppercase tracking-wider">
+            View Only
+          </span>
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <Clock className="w-3 h-3" />
             <span>{timeStr}</span>
@@ -153,12 +156,17 @@ export function DriveInMenuDisplay() {
       </header>
 
       {/* Hero Banner */}
-      <div className="bg-gradient-to-br from-amber-400 to-orange-500 text-white px-4 py-8 text-center">
+      <div className="bg-gradient-to-br from-teal-600 to-teal-700 text-white px-4 py-8 text-center">
         <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
-          <Car className="w-7 h-7 text-white" />
+          <Utensils className="w-7 h-7 text-white" />
         </div>
-        <h1 className="text-2xl font-bold mb-1">Drive-In Menu</h1>
+        <h1 className="text-2xl font-bold mb-1">Dinki Pos Menu</h1>
         <p className="text-sm text-white/85">Today's available items</p>
+        <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1">
+          <span className="text-xs font-semibold text-white/90">
+            👁️ Browse only — no ordering on this page
+          </span>
+        </div>
       </div>
 
       {/* Menu Content */}
@@ -234,8 +242,8 @@ export function DriveInMenuDisplay() {
       {/* Footer */}
       <footer className="border-t border-gray-100 py-6 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded bg-amber-500 flex items-center justify-center">
-            <Car className="w-3 h-3 text-white" />
+          <div className="w-6 h-6 rounded bg-teal-600 flex items-center justify-center">
+            <Utensils className="w-3 h-3 text-white" />
           </div>
           <span className="text-sm font-semibold text-gray-700">Dinki Pos</span>
         </div>

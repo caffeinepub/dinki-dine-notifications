@@ -36,7 +36,7 @@ const QR_ENTRIES: QREntry[] = [
     id: "drive-in",
     label: "Drive-In Self-Ordering",
     description:
-      "Place this QR in the parking area. Customers enter car details and order.",
+      "Customers scan to place orders from their car. Car number required.",
     url: `${APP_BASE}/?mode=drivein`,
     icon: "🚗",
     colorClass: "bg-yellow-500/10",
@@ -45,11 +45,11 @@ const QR_ENTRIES: QREntry[] = [
   },
   {
     id: "menu-only",
-    label: "Drive-In Menu (View Only)",
+    label: "Menu Display (View Only)",
     description:
-      "Read-only menu display for drive-in customers — no ordering, just browse.",
+      "Browse-only menu — no ordering. Perfect for customers to check items before approaching the counter.",
     url: `${APP_BASE}/?mode=menuonly`,
-    icon: "📋",
+    icon: "👁️",
     colorClass: "bg-orange-500/10",
     borderClass: "border-orange-500/30",
     labelColorClass: "text-orange-400",

@@ -764,7 +764,35 @@ function StaffDashboard() {
       </header>
 
       {/* Main */}
-      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 py-4 pb-24 md:pb-4">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 py-4 pb-28 md:pb-4">
+        {/* KPI Row - always at top, visible on both mobile and desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <KpiCard
+            label="Pending Orders"
+            value={pendingCount}
+            accent="orange"
+            icon={<Clock className="w-4 h-4" />}
+          />
+          <KpiCard
+            label="Active Tables"
+            value={activeCount}
+            accent="teal"
+            icon={<Activity className="w-4 h-4" />}
+          />
+          <KpiCard
+            label="Total Orders"
+            value={totalOrders}
+            accent="green"
+            icon={<UtensilsCrossed className="w-4 h-4" />}
+          />
+          <KpiCard
+            label="Total Items"
+            value={totalItems}
+            accent="red"
+            icon={<ShoppingBag className="w-4 h-4" />}
+          />
+        </div>
+
         {/* Mobile: tabs layout */}
         <div className="md:hidden">
           <Tabs defaultValue="orders">
@@ -795,41 +823,13 @@ function StaffDashboard() {
         </div>
 
         {/* Desktop: side-by-side panels */}
-        <div className="hidden md:flex gap-4 h-[calc(100vh-13rem)]">
+        <div className="hidden md:flex gap-4 h-[calc(100vh-16rem)]">
           <section className="flex-[7] flex flex-col min-w-0">
             {ordersSection}
           </section>
           <aside className="flex-[3] flex flex-col min-w-0">
             {notificationsSection}
           </aside>
-        </div>
-
-        {/* KPI Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-          <KpiCard
-            label="Pending Orders"
-            value={pendingCount}
-            accent="orange"
-            icon={<Clock className="w-4 h-4" />}
-          />
-          <KpiCard
-            label="Active Tables"
-            value={activeCount}
-            accent="teal"
-            icon={<Activity className="w-4 h-4" />}
-          />
-          <KpiCard
-            label="Total Orders"
-            value={totalOrders}
-            accent="green"
-            icon={<UtensilsCrossed className="w-4 h-4" />}
-          />
-          <KpiCard
-            label="Total Items"
-            value={totalItems}
-            accent="red"
-            icon={<ShoppingBag className="w-4 h-4" />}
-          />
         </div>
       </main>
 
