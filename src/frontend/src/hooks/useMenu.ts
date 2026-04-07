@@ -14,7 +14,6 @@ export function useMenu() {
       setMenuItems(items);
       setMenuLoaded(true);
     } catch (_e) {
-      // silently fail — NewOrderModal falls back to hardcoded items
       setMenuLoaded(true);
     }
   }, [actor]);
@@ -23,6 +22,7 @@ export function useMenu() {
     if (!actor || isFetching) return;
     const init = async () => {
       try {
+        // initMenu is a no-op on the backend (kept for API compat)
         await (actor as unknown as MenuActor).initMenu();
       } catch (_e) {
         // already initialized or error — proceed to load

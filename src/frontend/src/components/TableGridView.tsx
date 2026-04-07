@@ -244,6 +244,7 @@ ${itemLines}
         order={order}
         onClose={() => setShowAddItems(false)}
         onSubmit={onAddItems}
+        menuItems={menuItems}
       />
 
       <IssueBillModal

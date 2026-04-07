@@ -12,6 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Clock, PlusCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Order, OrderItem } from "../backend";
+import type { MenuItem as BackendMenuItem } from "../types/menu";
+
+const TIMING_KEY = "dinki_category_timing";
+
+type TimeSlot = { start: [number, number]; end: [number, number] };
 
 function toMinutes(h: number, m: number) {
   return h * 60 + m;
@@ -25,118 +30,53 @@ function inRange(start: [number, number], end: [number, number]) {
   return now >= toMinutes(...start) && now < toMinutes(...end);
 }
 
-type TimeSlot = { start: [number, number]; end: [number, number] };
+const DEFAULT_CATEGORY_SLOTS: Record<string, TimeSlot[]> = {
+  "Hot n Hot": [{ start: [9, 0], end: [23, 0] }],
+  Dosa: [{ start: [9, 0], end: [23, 0] }],
+  Breakfast: [{ start: [7, 0], end: [12, 0] }],
+  Chaat: [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream novelties": [{ start: [9, 0], end: [23, 0] }],
+  "Ice cream cups n packs": [{ start: [9, 0], end: [23, 0] }],
+  "Juice n Shakes": [{ start: [9, 0], end: [23, 0] }],
+  Soup: [{ start: [9, 0], end: [23, 0] }],
+  Starter: [{ start: [9, 0], end: [23, 0] }],
+  "Roti (Bread)": [
+    { start: [11, 30], end: [15, 30] },
+    { start: [19, 0], end: [22, 30] },
+  ],
+  "Main course": [{ start: [9, 0], end: [23, 0] }],
+  "Rice n Noodles": [{ start: [9, 0], end: [23, 0] }],
+  Softdrinks: [{ start: [9, 0], end: [23, 0] }],
+  "Grill n spice": [{ start: [9, 0], end: [23, 0] }],
+};
 
-interface MenuItem {
+function getCategorySlots(): Record<string, TimeSlot[]> {
+  try {
+    const data = localStorage.getItem(TIMING_KEY);
+    if (data) return { ...DEFAULT_CATEGORY_SLOTS, ...JSON.parse(data) };
+  } catch {}
+  return DEFAULT_CATEGORY_SLOTS;
+}
+
+interface LocalMenuItem {
   name: string;
   price: number;
-  category:
-    | "Hot n Hot"
-    | "Dosa"
-    | "Breakfast"
-    | "Chaat"
-    | "Ice cream novelties"
-    | "Ice cream cups n packs"
-    | "Juice n Shakes"
-    | "Soup"
-    | "Starter"
-    | "Roti (Bread)"
-    | "Main course"
-    | "Rice n Noodles"
-    | "Softdrinks"
-    | "Grill n spice";
+  category: string;
   slots: TimeSlot[];
 }
 
-const ALL_MENU_ITEMS: MenuItem[] = [
-  {
-    name: "Pongal",
-    price: 80,
-    category: "Hot n Hot",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Masala Dosa",
-    price: 120,
-    category: "Dosa",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Idli Sambar",
-    price: 90,
-    category: "Breakfast",
-    slots: [{ start: [7, 0], end: [12, 0] }],
-  },
-  {
-    name: "Pani Puri",
-    price: 60,
-    category: "Chaat",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Choco Bar",
-    price: 50,
-    category: "Ice cream novelties",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Vanilla Cup",
-    price: 60,
-    category: "Ice cream cups n packs",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Fresh Lime Juice",
-    price: 70,
-    category: "Juice n Shakes",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Tomato Soup",
-    price: 80,
-    category: "Soup",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Veg Spring Roll",
-    price: 120,
-    category: "Starter",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Butter Roti",
-    price: 35,
-    category: "Roti (Bread)",
-    slots: [
-      { start: [11, 30], end: [15, 30] },
-      { start: [19, 0], end: [22, 30] },
-    ],
-  },
-  {
-    name: "Paneer Butter Masala",
-    price: 220,
-    category: "Main course",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Veg Fried Rice",
-    price: 160,
-    category: "Rice n Noodles",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Coca Cola",
-    price: 40,
-    category: "Softdrinks",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-  {
-    name: "Paneer Tikka",
-    price: 260,
-    category: "Grill n spice",
-    slots: [{ start: [9, 0], end: [23, 0] }],
-  },
-];
+function backendToLocal(items: BackendMenuItem[]): LocalMenuItem[] {
+  const slots = getCategorySlots();
+  return items
+    .filter((i) => i.available)
+    .map((i) => ({
+      name: i.name,
+      price: Number(i.price),
+      category: i.category,
+      slots: slots[i.category] ??
+        slots["Main course"] ?? [{ start: [9, 0], end: [23, 0] }],
+    }));
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   "Hot n Hot": "text-red-400 border-red-500/30 bg-red-500/10",
@@ -155,27 +95,19 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Grill n spice": "text-purple-400 border-purple-500/30 bg-purple-500/10",
 };
 
-const CATEGORY_SCHEDULE: Record<string, string> = {
-  "Hot n Hot": "09:00 – 23:00",
-  Dosa: "09:00 – 23:00",
-  Breakfast: "07:00 – 12:00",
-  Chaat: "09:00 – 23:00",
-  "Ice cream novelties": "09:00 – 23:00",
-  "Ice cream cups n packs": "09:00 – 23:00",
-  "Juice n Shakes": "09:00 – 23:00",
-  Soup: "09:00 – 23:00",
-  Starter: "09:00 – 23:00",
-  "Roti (Bread)": "11:30–15:30 & 19:00–22:30",
-  "Main course": "09:00 – 23:00",
-  "Rice n Noodles": "09:00 – 23:00",
-  Softdrinks: "09:00 – 23:00",
-  "Grill n spice": "09:00 – 23:00",
-};
-
 const SPECIAL_ITEMS = ["Packing Charges", "Delivery Charge"];
 
-function isAvailableNow(item: MenuItem): boolean {
+function isAvailableNow(item: LocalMenuItem): boolean {
   return item.slots.some((s) => inRange(s.start, s.end));
+}
+
+function formatSlots(slots: TimeSlot[]): string {
+  return slots
+    .map(
+      (s) =>
+        `${String(s.start[0]).padStart(2, "0")}:${String(s.start[1]).padStart(2, "0")} – ${String(s.end[0]).padStart(2, "0")}:${String(s.end[1]).padStart(2, "0")}`,
+    )
+    .join(" & ");
 }
 
 interface AddItemsModalProps {
@@ -188,6 +120,7 @@ interface AddItemsModalProps {
     packingCharge: bigint,
     deliveryCharge: bigint,
   ) => Promise<void>;
+  menuItems?: BackendMenuItem[];
 }
 
 export function AddItemsModal({
@@ -195,6 +128,7 @@ export function AddItemsModal({
   order,
   onClose,
   onSubmit,
+  menuItems = [],
 }: AddItemsModalProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [packingCharge, setPackingCharge] = useState("");
@@ -226,7 +160,8 @@ export function AddItemsModal({
     }
   }, [open, order]);
 
-  const availableItems = ALL_MENU_ITEMS.filter(isAvailableNow);
+  const allLocalItems = backendToLocal(menuItems);
+  const availableItems = allLocalItems.filter(isAvailableNow);
   const categories = Array.from(new Set(availableItems.map((i) => i.category)));
 
   const toggleItem = (name: string) => {
@@ -340,7 +275,15 @@ export function AddItemsModal({
             <h3 className="text-xs font-semibold text-din-teal uppercase tracking-wider mb-3">
               Add Menu Items
             </h3>
-            {availableItems.length === 0 ? (
+            {menuItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-din-muted">
+                <PlusCircle className="w-8 h-8 mb-2 opacity-30" />
+                <p className="text-sm font-medium">No menu items found</p>
+                <p className="text-xs opacity-60 mt-1">
+                  Add items via Menu Admin (PIN 1234)
+                </p>
+              </div>
+            ) : availableItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-din-muted">
                 <Clock className="w-8 h-8 mb-2 opacity-30" />
                 <p className="text-sm font-medium">
@@ -356,14 +299,20 @@ export function AddItemsModal({
                   const catItems = availableItems.filter(
                     (i) => i.category === cat,
                   );
+                  const catColor =
+                    CATEGORY_COLORS[cat] ??
+                    "text-gray-400 border-gray-500/30 bg-gray-500/10";
+                  const scheduleLabel = formatSlots(
+                    catItems[0]?.slots ?? getCategorySlots()[cat] ?? [],
+                  );
                   return (
                     <div key={cat}>
                       <div
-                        className={`flex items-center justify-between px-2 py-1 rounded mb-2 border text-xs font-semibold ${CATEGORY_COLORS[cat]}`}
+                        className={`flex items-center justify-between px-2 py-1 rounded mb-2 border text-xs font-semibold ${catColor}`}
                       >
                         <span>{cat}</span>
                         <span className="font-normal opacity-75">
-                          {CATEGORY_SCHEDULE[cat]}
+                          {scheduleLabel}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
