@@ -1,9 +1,10 @@
+import { useActor } from "@caffeineai/core-infrastructure";
 import { useCallback, useEffect, useState } from "react";
+import { createActor } from "../backend";
 import type { MenuActor, MenuItem } from "../types/menu";
-import { useActor } from "./useActor";
 
 export function useMenu() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuLoaded, setMenuLoaded] = useState(false);
 

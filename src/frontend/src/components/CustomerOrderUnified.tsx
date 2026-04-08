@@ -1,6 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
+  ArrowLeft,
+  ArrowRight,
   Car,
   CheckCircle2,
   MapPin,
@@ -15,11 +18,10 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrderInput, OrderItem } from "../backend";
-import { OrderStatus } from "../backend";
-import { useActor } from "../hooks/useActor";
+import { OrderStatus, createActor } from "../backend";
 import type { MenuActor, MenuItem } from "../types/menu";
 
-// ── Schedule definitions (read from localStorage if set by MenuAdmin) ──────────
+// ── Schedule definitions ──────────────────────────────────────────────────────
 const DEFAULT_SLOTS: Record<
   string,
   { start: [number, number]; end: [number, number] }[]
@@ -80,51 +82,50 @@ function getCategoryLabel(category: string): string {
 }
 
 type OrderTab = "drivein" | "takeaway" | "delivery";
-type Screen = "ordering" | "confirm";
+type Screen = "form" | "menu" | "confirm";
 
 const TAB_CONFIG = {
   drivein: {
     label: "Drive-In",
     icon: Car,
-    color: "amber",
     activeClass: "bg-amber-500 text-white",
-    inactiveClass: "text-amber-700 bg-amber-50 hover:bg-amber-100",
-    borderClass: "border-amber-300",
     accentClass: "text-amber-600",
     btnClass: "bg-amber-500 hover:bg-amber-600 text-white",
-    badgeClass: "bg-amber-100 text-amber-700 border-amber-200",
+    borderClass: "border-amber-300",
     inputFocusClass: "focus:border-amber-400",
+    summaryBg: "bg-amber-50 border-amber-200",
+    summaryIcon: <Car className="w-4 h-4 text-amber-500 flex-shrink-0" />,
   },
   takeaway: {
     label: "Takeaway",
     icon: ShoppingBag,
-    color: "orange",
     activeClass: "bg-orange-500 text-white",
-    inactiveClass: "text-orange-700 bg-orange-50 hover:bg-orange-100",
-    borderClass: "border-orange-300",
     accentClass: "text-orange-600",
     btnClass: "bg-orange-500 hover:bg-orange-600 text-white",
-    badgeClass: "bg-orange-100 text-orange-700 border-orange-200",
+    borderClass: "border-orange-300",
     inputFocusClass: "focus:border-orange-400",
+    summaryBg: "bg-orange-50 border-orange-200",
+    summaryIcon: (
+      <ShoppingBag className="w-4 h-4 text-orange-500 flex-shrink-0" />
+    ),
   },
   delivery: {
     label: "Delivery",
     icon: Truck,
-    color: "indigo",
     activeClass: "bg-indigo-600 text-white",
-    inactiveClass: "text-indigo-700 bg-indigo-50 hover:bg-indigo-100",
-    borderClass: "border-indigo-300",
     accentClass: "text-indigo-600",
     btnClass: "bg-indigo-600 hover:bg-indigo-700 text-white",
-    badgeClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    borderClass: "border-indigo-300",
     inputFocusClass: "focus:border-indigo-400",
+    summaryBg: "bg-indigo-50 border-indigo-200",
+    summaryIcon: <Truck className="w-4 h-4 text-indigo-500 flex-shrink-0" />,
   },
 } as const;
 
 export function CustomerOrderUnified() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useActor(createActor);
   const [tab, setTab] = useState<OrderTab>("drivein");
-  const [screen, setScreen] = useState<Screen>("ordering");
+  const [screen, setScreen] = useState<Screen>("form");
 
   // Drive-In fields
   const [carPlate, setCarPlate] = useState("");
@@ -142,8 +143,6 @@ export function CustomerOrderUnified() {
   const [delNote, setDelNote] = useState("");
 
   const [formError, setFormError] = useState("");
-
-  // Menu state
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuLoading, setMenuLoading] = useState(false);
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -153,21 +152,19 @@ export function CustomerOrderUnified() {
 
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Clock tick every minute for schedule
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
 
-  // Reset form & cart when tab changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: setters are stable
   useEffect(() => {
     setFormError("");
     setCart({});
     setOrderError("");
+    if (screen === "menu") setScreen("form");
   }, [tab]);
 
-  // Load menu on mount (and reload if actor becomes available)
   useEffect(() => {
     if (!actor) return;
     setMenuLoading(true);
@@ -225,7 +222,7 @@ export function CustomerOrderUnified() {
   const validateForm = (): boolean => {
     setFormError("");
     if (tab === "drivein" && !carPlate.trim()) {
-      setFormError("Please enter your car number to place an order.");
+      setFormError("Please enter your car number to continue.");
       return false;
     }
     if (tab === "takeaway" && !taName.trim() && !taPhone.trim()) {
@@ -249,15 +246,17 @@ export function CustomerOrderUnified() {
     return true;
   };
 
-  const handlePlaceOrder = async () => {
-    if (!actor || cartItems.length === 0) return;
-
-    // Validate form before placing order, scroll to top on error
-    if (!validateForm()) {
+  const handleNext = () => {
+    if (!validateForm()) return;
+    setScreen("menu");
+    setTimeout(() => {
       pageRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
+    }, 50);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!actor || cartItems.length === 0) return;
 
     setPlacing(true);
     setOrderError("");
@@ -287,7 +286,6 @@ export function CustomerOrderUnified() {
           color: "",
         };
       } else {
-        // delivery
         customerMobile = delPhone.trim();
         vehicleInfo = {
           licensePlate: `DELIVERY-${delPhone.trim()}`,
@@ -327,8 +325,87 @@ export function CustomerOrderUnified() {
     }
   };
 
+  const handleReset = () => {
+    setCart({});
+    setScreen("form");
+    setCarPlate("");
+    setCarMake("");
+    setCarColor("");
+    setTaName("");
+    setTaPhone("");
+    setDelName("");
+    setDelPhone("");
+    setDelAddress("");
+    setDelNote("");
+    setFormError("");
+    setOrderError("");
+  };
+
   const cfg = TAB_CONFIG[tab];
   const categoryNames = Object.keys(groupedMenu);
+
+  // ── Shared Header ─────────────────────────────────────────────────────────
+  const TabHeader = ({ showBack }: { showBack?: boolean }) => (
+    <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
+      <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
+        {showBack && (
+          <button
+            type="button"
+            data-ocid="unified_order.back_button"
+            onClick={() => setScreen("form")}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+              tab === "drivein"
+                ? "bg-amber-50 text-amber-500 hover:bg-amber-100"
+                : tab === "takeaway"
+                  ? "bg-orange-50 text-orange-500 hover:bg-orange-100"
+                  : "bg-indigo-50 text-indigo-500 hover:bg-indigo-100"
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
+        <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+          <Utensils className="w-4 h-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-gray-900 leading-none">
+            Dinki Pos
+          </p>
+          <p className="text-xs text-gray-500">Order Online</p>
+        </div>
+      </div>
+
+      {/* Tab bar — only shown on form page */}
+      {!showBack && (
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}
+          className="max-w-lg mx-auto border-t border-gray-100"
+        >
+          {(["drivein", "takeaway", "delivery"] as OrderTab[]).map((t) => {
+            const tabCfg = TAB_CONFIG[t];
+            const Icon = tabCfg.icon;
+            const isActive = tab === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                data-ocid="unified_order.tab"
+                onClick={() => setTab(t)}
+                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+                  isActive
+                    ? `${tabCfg.accentClass} border-current`
+                    : "text-gray-500 border-transparent hover:text-gray-700"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tabCfg.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </header>
+  );
 
   // ── Confirmation Screen ───────────────────────────────────────────────────
   if (screen === "confirm") {
@@ -378,20 +455,7 @@ export function CustomerOrderUnified() {
           <button
             type="button"
             data-ocid="unified_order.primary_button"
-            onClick={() => {
-              setCart({});
-              setScreen("ordering");
-              setCarPlate("");
-              setCarMake("");
-              setCarColor("");
-              setTaName("");
-              setTaPhone("");
-              setDelName("");
-              setDelPhone("");
-              setDelAddress("");
-              setDelNote("");
-              setFormError("");
-            }}
+            onClick={handleReset}
             className={`mt-6 w-full h-12 text-base font-semibold rounded-xl flex items-center justify-center gap-2 ${cfg.btnClass}`}
           >
             Place Another Order
@@ -401,445 +465,473 @@ export function CustomerOrderUnified() {
     );
   }
 
-  // ── Single-page ordering layout ───────────────────────────────────────────
+  // ── Page 1: Details Form ──────────────────────────────────────────────────
+  if (screen === "form") {
+    return (
+      <div className="cust-page min-h-screen bg-gray-50 flex flex-col">
+        <TabHeader />
+
+        <main className="flex-1 max-w-lg mx-auto w-full px-4 py-5">
+          {/* Progress indicator */}
+          <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center ${
+                  tab === "drivein"
+                    ? "bg-amber-500"
+                    : tab === "takeaway"
+                      ? "bg-orange-500"
+                      : "bg-indigo-600"
+                }`}
+              >
+                1
+              </div>
+              <span className="text-xs font-semibold text-gray-700">
+                Your Details
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-gray-200" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-400 text-xs font-bold flex items-center justify-center">
+                2
+              </div>
+              <span className="text-xs text-gray-400">Choose Items</span>
+            </div>
+          </div>
+
+          {/* Form Card */}
+          <div
+            data-ocid="unified_order.panel"
+            className={`bg-white rounded-2xl shadow-sm border p-5 mb-5 ${cfg.borderClass}`}
+          >
+            {/* Tab identity banner */}
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                  tab === "drivein"
+                    ? "bg-amber-100"
+                    : tab === "takeaway"
+                      ? "bg-orange-100"
+                      : "bg-indigo-100"
+                }`}
+              >
+                {tab === "drivein" && (
+                  <Car className="w-5 h-5 text-amber-600" />
+                )}
+                {tab === "takeaway" && (
+                  <ShoppingBag className="w-5 h-5 text-orange-600" />
+                )}
+                {tab === "delivery" && (
+                  <Truck className="w-5 h-5 text-indigo-600" />
+                )}
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 text-sm leading-none">
+                  {tab === "drivein" && "Drive-In Order"}
+                  {tab === "takeaway" && "Takeaway Order"}
+                  {tab === "delivery" && "Online Delivery"}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {tab === "drivein" && "Order from your car"}
+                  {tab === "takeaway" && "Pick up at the counter"}
+                  {tab === "delivery" && "Delivered to your door"}
+                </p>
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-3">
+              {tab === "drivein" && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="uni-plate"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      Car Number / License Plate{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="uni-plate"
+                      data-ocid="unified_order.input"
+                      type="text"
+                      value={carPlate}
+                      onChange={(e) => {
+                        setCarPlate(e.target.value);
+                        setFormError("");
+                      }}
+                      placeholder="e.g. MH 12 AB 1234"
+                      className={`w-full h-11 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${
+                        formError && !carPlate.trim()
+                          ? "border-red-400 bg-red-50 focus:border-red-500"
+                          : `border-gray-200 ${cfg.inputFocusClass}`
+                      }`}
+                      autoCapitalize="characters"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label
+                        htmlFor="uni-make"
+                        className="block text-xs font-semibold text-gray-600 mb-1"
+                      >
+                        Car Make
+                      </label>
+                      <input
+                        id="uni-make"
+                        type="text"
+                        value={carMake}
+                        onChange={(e) => setCarMake(e.target.value)}
+                        placeholder="e.g. Maruti"
+                        className={`w-full h-11 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="uni-color"
+                        className="block text-xs font-semibold text-gray-600 mb-1"
+                      >
+                        Car Color
+                      </label>
+                      <input
+                        id="uni-color"
+                        type="text"
+                        value={carColor}
+                        onChange={(e) => setCarColor(e.target.value)}
+                        placeholder="e.g. Red"
+                        className={`w-full h-11 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {tab === "takeaway" && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="uni-ta-name"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      <User className="w-3 h-3 inline mr-1" />
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="uni-ta-name"
+                      data-ocid="unified_order.input"
+                      type="text"
+                      value={taName}
+                      onChange={(e) => {
+                        setTaName(e.target.value);
+                        setFormError("");
+                      }}
+                      placeholder="Customer name"
+                      className={`w-full h-11 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${formError && !taName.trim() && !taPhone.trim() ? "border-red-400 bg-red-50 focus:border-red-500" : `border-gray-200 ${cfg.inputFocusClass}`}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="uni-ta-phone"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      <Phone className="w-3 h-3 inline mr-1" />
+                      Phone (optional)
+                    </label>
+                    <input
+                      id="uni-ta-phone"
+                      data-ocid="unified_order.input"
+                      type="tel"
+                      value={taPhone}
+                      onChange={(e) => setTaPhone(e.target.value)}
+                      placeholder="9876543210"
+                      className={`w-full h-11 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
+                    />
+                  </div>
+                </>
+              )}
+
+              {tab === "delivery" && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="uni-del-name"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      <User className="w-3 h-3 inline mr-1" />
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="uni-del-name"
+                      data-ocid="unified_order.input"
+                      type="text"
+                      value={delName}
+                      onChange={(e) => {
+                        setDelName(e.target.value);
+                        setFormError("");
+                      }}
+                      placeholder="Your full name"
+                      className={`w-full h-11 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${formError && !delName.trim() ? "border-red-400 bg-red-50 focus:border-red-500" : `border-gray-200 ${cfg.inputFocusClass}`}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="uni-del-phone"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      <Phone className="w-3 h-3 inline mr-1" />
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="uni-del-phone"
+                      data-ocid="unified_order.input"
+                      type="tel"
+                      value={delPhone}
+                      onChange={(e) => {
+                        setDelPhone(e.target.value);
+                        setFormError("");
+                      }}
+                      placeholder="9876543210"
+                      className={`w-full h-11 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${formError && !delPhone.trim() ? "border-red-400 bg-red-50 focus:border-red-500" : `border-gray-200 ${cfg.inputFocusClass}`}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="uni-del-addr"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      <MapPin className="w-3 h-3 inline mr-1" />
+                      Delivery Address <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      id="uni-del-addr"
+                      data-ocid="unified_order.textarea"
+                      value={delAddress}
+                      onChange={(e) => {
+                        setDelAddress(e.target.value);
+                        setFormError("");
+                      }}
+                      placeholder="House/flat number, street, landmark..."
+                      rows={2}
+                      className={`w-full px-3 py-2.5 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors resize-none ${formError && !delAddress.trim() ? "border-red-400 bg-red-50 focus:border-red-500" : `border-gray-200 ${cfg.inputFocusClass}`}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="uni-del-note"
+                      className="block text-xs font-semibold text-gray-600 mb-1"
+                    >
+                      Special Instructions (optional)
+                    </label>
+                    <input
+                      id="uni-del-note"
+                      data-ocid="unified_order.input"
+                      type="text"
+                      value={delNote}
+                      onChange={(e) => setDelNote(e.target.value)}
+                      placeholder="Any specific instructions..."
+                      className={`w-full h-11 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {formError && (
+              <p
+                data-ocid="unified_order.error_state"
+                className="text-xs text-red-500 mt-3 flex items-center gap-1"
+              >
+                <span className="inline-block w-4 h-4 rounded-full bg-red-100 text-center leading-4 font-bold text-[10px] flex-shrink-0">
+                  !
+                </span>
+                {formError}
+              </p>
+            )}
+          </div>
+
+          {/* Next button */}
+          <button
+            type="button"
+            data-ocid="unified_order.primary_button"
+            onClick={handleNext}
+            className={`w-full h-14 flex items-center justify-center gap-2 font-bold rounded-2xl shadow-lg transition-colors ${cfg.btnClass}`}
+          >
+            <span>View Menu &amp; Order</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <p className="mt-6 text-xs text-gray-400 text-center">
+            © {new Date().getFullYear()} ·{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              caffeine.ai
+            </a>
+          </p>
+        </main>
+      </div>
+    );
+  }
+
+  // ── Page 2: Menu + Cart ────────────────────────────────────────────────────
   return (
     <div
       ref={pageRef}
       className="cust-page min-h-screen bg-gray-50 flex flex-col"
     >
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
-            <Utensils className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 leading-none">
-              Dinki Pos
-            </p>
-            <p className="text-xs text-gray-500">Order Online</p>
-          </div>
-        </div>
+      <TabHeader showBack />
 
-        {/* Tab Bar */}
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}
-          className="max-w-lg mx-auto border-t border-gray-100"
-        >
-          {(["drivein", "takeaway", "delivery"] as OrderTab[]).map((t) => {
-            const tabCfg = TAB_CONFIG[t];
-            const Icon = tabCfg.icon;
-            const isActive = tab === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                data-ocid="unified_order.tab"
-                onClick={() => setTab(t)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-                  isActive
-                    ? `${tabCfg.accentClass} border-current`
-                    : "text-gray-500 border-transparent hover:text-gray-700"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tabCfg.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </header>
-
-      {/* Main scrollable content */}
       <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4 pb-36">
-        {/* ── Compact Form Card ── */}
+        {/* Customer confirmation banner */}
         <div
-          data-ocid="unified_order.panel"
-          className={`bg-white rounded-2xl shadow-sm border p-4 mb-5 ${cfg.borderClass}`}
+          className={`rounded-xl px-4 py-3 mb-4 flex items-center gap-3 border ${cfg.summaryBg}`}
         >
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-            Step 1 — Your Details
-          </p>
-          {/* Tab identity banner */}
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                tab === "drivein"
-                  ? "bg-amber-100"
-                  : tab === "takeaway"
-                    ? "bg-orange-100"
-                    : "bg-indigo-100"
-              }`}
-            >
-              {tab === "drivein" && <Car className="w-5 h-5 text-amber-600" />}
-              {tab === "takeaway" && (
-                <ShoppingBag className="w-5 h-5 text-orange-600" />
-              )}
-              {tab === "delivery" && (
-                <Truck className="w-5 h-5 text-indigo-600" />
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-gray-800 text-sm leading-none">
-                {tab === "drivein" && "Drive-In Order"}
-                {tab === "takeaway" && "Takeaway Order"}
-                {tab === "delivery" && "Online Delivery"}
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {tab === "drivein" && "Order from your car"}
-                {tab === "takeaway" && "Pick up at the counter"}
-                {tab === "delivery" && "Delivered to your door"}
-              </p>
-            </div>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-3">
-            {tab === "drivein" && (
-              <>
-                <div>
-                  <label
-                    htmlFor="uni-plate"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    Car Number / License Plate{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="uni-plate"
-                    data-ocid="unified_order.input"
-                    type="text"
-                    value={carPlate}
-                    onChange={(e) => {
-                      setCarPlate(e.target.value);
-                      setFormError("");
-                    }}
-                    placeholder="e.g. MH 12 AB 1234"
-                    className={`w-full h-10 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${
-                      formError && !carPlate.trim()
-                        ? "border-red-400 bg-red-50 focus:border-red-500"
-                        : `border-gray-200 ${cfg.inputFocusClass}`
-                    }`}
-                    autoCapitalize="characters"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label
-                      htmlFor="uni-make"
-                      className="block text-xs font-medium text-gray-600 mb-1"
-                    >
-                      Car Make
-                    </label>
-                    <input
-                      id="uni-make"
-                      type="text"
-                      value={carMake}
-                      onChange={(e) => setCarMake(e.target.value)}
-                      placeholder="e.g. Maruti"
-                      className={`w-full h-10 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="uni-color"
-                      className="block text-xs font-medium text-gray-600 mb-1"
-                    >
-                      Car Color
-                    </label>
-                    <input
-                      id="uni-color"
-                      type="text"
-                      value={carColor}
-                      onChange={(e) => setCarColor(e.target.value)}
-                      placeholder="e.g. Red"
-                      className={`w-full h-10 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {tab === "takeaway" && (
-              <>
-                <div>
-                  <label
-                    htmlFor="uni-ta-name"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    <User className="w-3 h-3 inline mr-1" />
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="uni-ta-name"
-                    data-ocid="unified_order.input"
-                    type="text"
-                    value={taName}
-                    onChange={(e) => {
-                      setTaName(e.target.value);
-                      setFormError("");
-                    }}
-                    placeholder="Customer name"
-                    className={`w-full h-10 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${
-                      formError && !taName.trim() && !taPhone.trim()
-                        ? "border-red-400 bg-red-50 focus:border-red-500"
-                        : `border-gray-200 ${cfg.inputFocusClass}`
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="uni-ta-phone"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    <Phone className="w-3 h-3 inline mr-1" />
-                    Phone (optional)
-                  </label>
-                  <input
-                    id="uni-ta-phone"
-                    data-ocid="unified_order.input"
-                    type="tel"
-                    value={taPhone}
-                    onChange={(e) => setTaPhone(e.target.value)}
-                    placeholder="9876543210"
-                    className={`w-full h-10 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
-                  />
-                </div>
-              </>
-            )}
-
-            {tab === "delivery" && (
-              <>
-                <div>
-                  <label
-                    htmlFor="uni-del-name"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    <User className="w-3 h-3 inline mr-1" />
-                    Full Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="uni-del-name"
-                    data-ocid="unified_order.input"
-                    type="text"
-                    value={delName}
-                    onChange={(e) => {
-                      setDelName(e.target.value);
-                      setFormError("");
-                    }}
-                    placeholder="Your full name"
-                    className={`w-full h-10 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${
-                      formError && !delName.trim()
-                        ? "border-red-400 bg-red-50 focus:border-red-500"
-                        : `border-gray-200 ${cfg.inputFocusClass}`
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="uni-del-phone"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    <Phone className="w-3 h-3 inline mr-1" />
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="uni-del-phone"
-                    data-ocid="unified_order.input"
-                    type="tel"
-                    value={delPhone}
-                    onChange={(e) => {
-                      setDelPhone(e.target.value);
-                      setFormError("");
-                    }}
-                    placeholder="9876543210"
-                    className={`w-full h-10 px-3 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors ${
-                      formError && !delPhone.trim()
-                        ? "border-red-400 bg-red-50 focus:border-red-500"
-                        : `border-gray-200 ${cfg.inputFocusClass}`
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="uni-del-addr"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    <MapPin className="w-3 h-3 inline mr-1" />
-                    Delivery Address <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    id="uni-del-addr"
-                    data-ocid="unified_order.textarea"
-                    value={delAddress}
-                    onChange={(e) => {
-                      setDelAddress(e.target.value);
-                      setFormError("");
-                    }}
-                    placeholder="House/flat number, street, landmark..."
-                    rows={2}
-                    className={`w-full px-3 py-2 rounded-xl border-2 focus:outline-none text-gray-800 text-sm transition-colors resize-none ${
-                      formError && !delAddress.trim()
-                        ? "border-red-400 bg-red-50 focus:border-red-500"
-                        : `border-gray-200 ${cfg.inputFocusClass}`
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="uni-del-note"
-                    className="block text-xs font-medium text-gray-600 mb-1"
-                  >
-                    Special Instructions (optional)
-                  </label>
-                  <input
-                    id="uni-del-note"
-                    data-ocid="unified_order.input"
-                    type="text"
-                    value={delNote}
-                    onChange={(e) => setDelNote(e.target.value)}
-                    placeholder="Any specific instructions..."
-                    className={`w-full h-10 px-3 rounded-xl border-2 border-gray-200 focus:outline-none text-gray-800 text-sm transition-colors ${cfg.inputFocusClass}`}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          {formError && (
-            <p
-              data-ocid="unified_order.error_state"
-              className="text-xs text-red-500 mt-3 flex items-center gap-1"
-            >
-              <span className="inline-block w-4 h-4 rounded-full bg-red-100 text-red-500 text-center leading-4 font-bold text-[10px] flex-shrink-0">
-                !
-              </span>
-              {formError}
+          {cfg.summaryIcon}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-gray-500">
+              {tab === "drivein"
+                ? "Car Number"
+                : tab === "takeaway"
+                  ? "Order for"
+                  : "Delivering to"}
             </p>
-          )}
+            <p className="text-sm font-bold text-gray-800 truncate">
+              {tab === "drivein" && carPlate}
+              {tab === "takeaway" && (taName || taPhone)}
+              {tab === "delivery" && delAddress}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setScreen("form")}
+            className="text-xs text-gray-400 underline hover:text-gray-600 flex-shrink-0"
+          >
+            Change
+          </button>
         </div>
 
-        {/* ── Menu Section ── */}
-        <div className="mb-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Utensils className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-              Step 2 — Choose Your Items
-            </h2>
-          </div>
+        {/* Menu heading */}
+        <div className="flex items-center gap-2 mb-4">
+          <Utensils className="w-4 h-4 text-orange-500" />
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+            Choose Your Items
+          </h2>
+        </div>
 
-          {menuLoading || isFetching ? (
-            <div data-ocid="unified_order.loading_state" className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
-              ))}
+        {menuLoading || isFetching ? (
+          <div data-ocid="unified_order.loading_state" className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : categoryNames.length === 0 ? (
+          <div
+            data-ocid="unified_order.empty_state"
+            className="flex flex-col items-center justify-center py-16 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-4">
+              <Utensils className="w-7 h-7 text-orange-300" />
             </div>
-          ) : categoryNames.length === 0 ? (
-            <div
-              data-ocid="unified_order.empty_state"
-              className="flex flex-col items-center justify-center py-16 text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-4">
-                <Utensils className="w-7 h-7 text-orange-300" />
-              </div>
-              <h3 className="font-semibold text-gray-700 text-lg">
-                Kitchen is Closed
-              </h3>
-              <p className="text-sm text-gray-500 mt-1 max-w-xs">
-                No items available right now. Check back during service hours.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {categoryNames.map((category) => (
-                <section key={category}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h2 className="text-base font-bold text-gray-800">
-                      {category}
-                    </h2>
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] bg-orange-50 text-orange-600 border-orange-200"
+            <h3 className="font-semibold text-gray-700 text-lg">
+              Kitchen is Closed
+            </h3>
+            <p className="text-sm text-gray-500 mt-1 max-w-xs">
+              No items available right now. Check back during service hours.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {categoryNames.map((category) => (
+              <section key={category}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-base font-bold text-gray-800">
+                    {category}
+                  </h2>
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-orange-50 text-orange-600 border-orange-200"
+                  >
+                    {getCategoryLabel(category)}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {groupedMenu[category].map((item, idx) => (
+                    <div
+                      key={item.id.toString()}
+                      data-ocid={`unified_order.item.${idx + 1}`}
+                      className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm"
                     >
-                      {getCategoryLabel(category)}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    {groupedMenu[category].map((item, idx) => (
-                      <div
-                        key={item.id.toString()}
-                        data-ocid={`unified_order.item.${idx + 1}`}
-                        className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm"
-                      >
-                        <div className="min-w-0 flex-1 mr-4">
-                          <p className="font-medium text-gray-800 text-sm">
-                            {item.name}
-                          </p>
-                          <p
-                            className={`font-semibold text-sm mt-0.5 ${cfg.accentClass}`}
-                          >
-                            ₹{Number(item.price).toFixed(2)}
-                          </p>
-                        </div>
-                        {(cart[item.id.toString()] ?? 0) === 0 ? (
+                      <div className="min-w-0 flex-1 mr-4">
+                        <p className="font-medium text-gray-800 text-sm">
+                          {item.name}
+                        </p>
+                        <p
+                          className={`font-semibold text-sm mt-0.5 ${cfg.accentClass}`}
+                        >
+                          ₹{Number(item.price).toFixed(2)}
+                        </p>
+                      </div>
+                      {(cart[item.id.toString()] ?? 0) === 0 ? (
+                        <button
+                          type="button"
+                          data-ocid={`unified_order.toggle.${idx + 1}`}
+                          onClick={() => setQty(item.id.toString(), 1)}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 text-sm font-semibold hover:opacity-80 transition-opacity ${
+                            tab === "drivein"
+                              ? "border-amber-400 text-amber-600"
+                              : tab === "takeaway"
+                                ? "border-orange-400 text-orange-600"
+                                : "border-indigo-400 text-indigo-600"
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          ADD
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            data-ocid={`unified_order.toggle.${idx + 1}`}
-                            onClick={() => setQty(item.id.toString(), 1)}
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 text-sm font-semibold hover:opacity-80 transition-opacity ${
+                            data-ocid={`unified_order.secondary_button.${idx + 1}`}
+                            onClick={() => setQty(item.id.toString(), -1)}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
                               tab === "drivein"
-                                ? "border-amber-400 text-amber-600"
+                                ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
                                 : tab === "takeaway"
-                                  ? "border-orange-400 text-orange-600"
-                                  : "border-indigo-400 text-indigo-600"
+                                  ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
+                                  : "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                            }`}
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="w-5 text-center font-bold text-gray-800 text-sm">
+                            {cart[item.id.toString()]}
+                          </span>
+                          <button
+                            type="button"
+                            data-ocid={`unified_order.primary_button.${idx + 1}`}
+                            onClick={() => setQty(item.id.toString(), 1)}
+                            className={`w-7 h-7 rounded-lg text-white flex items-center justify-center transition-opacity hover:opacity-80 ${
+                              tab === "drivein"
+                                ? "bg-amber-500"
+                                : tab === "takeaway"
+                                  ? "bg-orange-500"
+                                  : "bg-indigo-600"
                             }`}
                           >
                             <Plus className="w-3.5 h-3.5" />
-                            ADD
                           </button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              data-ocid={`unified_order.secondary_button.${idx + 1}`}
-                              onClick={() => setQty(item.id.toString(), -1)}
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                                tab === "drivein"
-                                  ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
-                                  : tab === "takeaway"
-                                    ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
-                                    : "bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
-                              }`}
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="w-5 text-center font-bold text-gray-800 text-sm">
-                              {cart[item.id.toString()]}
-                            </span>
-                            <button
-                              type="button"
-                              data-ocid={`unified_order.primary_button.${idx + 1}`}
-                              onClick={() => setQty(item.id.toString(), 1)}
-                              className={`w-7 h-7 rounded-lg text-white flex items-center justify-center transition-opacity hover:opacity-80 ${
-                                tab === "drivein"
-                                  ? "bg-amber-500"
-                                  : tab === "takeaway"
-                                    ? "bg-orange-500"
-                                    : "bg-indigo-600"
-                              }`}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
 
         <p className="mt-8 text-xs text-gray-400 text-center">
           © {new Date().getFullYear()} ·{" "}

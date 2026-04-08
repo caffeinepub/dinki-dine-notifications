@@ -149,12 +149,15 @@ export interface backendInterface {
     acknowledgeNotification(notificationId: bigint): Promise<void>;
     addItemsToOrder(orderId: bigint, newItems: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
     addMenuItem(name: string, category: string, price: bigint, printerNumber: bigint): Promise<bigint>;
+    bulkAddMenuItems(items: Array<[string, string, bigint, bigint, boolean]>): Promise<bigint>;
     cancelOrder(orderId: bigint, reason: string): Promise<void>;
     clearAllData(): Promise<void>;
     clearAllNotifications(): Promise<void>;
     clearAllOrders(): Promise<void>;
     deleteMenuItem(id: bigint): Promise<void>;
+    exportMenuCSV(): Promise<string>;
     getAllOrders(): Promise<Array<Order>>;
+    getMenuBackup(): Promise<Array<[bigint, string, string, bigint, bigint, boolean]>>;
     getMenuItems(): Promise<Array<MenuItem>>;
     getNotifications(): Promise<Array<Notification>>;
     getOrderById(id: bigint): Promise<Order>;
@@ -228,6 +231,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async bulkAddMenuItems(arg0: Array<[string, string, bigint, bigint, boolean]>): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.bulkAddMenuItems(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.bulkAddMenuItems(arg0);
+            return result;
+        }
+    }
     async cancelOrder(arg0: bigint, arg1: string): Promise<void> {
         if (this.processError) {
             try {
@@ -298,6 +315,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async exportMenuCSV(): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.exportMenuCSV();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.exportMenuCSV();
+            return result;
+        }
+    }
     async getAllOrders(): Promise<Array<Order>> {
         if (this.processError) {
             try {
@@ -310,6 +341,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getAllOrders();
             return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getMenuBackup(): Promise<Array<[bigint, string, string, bigint, bigint, boolean]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMenuBackup();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMenuBackup();
+            return result;
         }
     }
     async getMenuItems(): Promise<Array<MenuItem>> {

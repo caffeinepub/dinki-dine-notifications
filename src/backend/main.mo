@@ -164,6 +164,39 @@ actor {
     menuSeeded := true;
   };
 
+  // Bulk-add menu items from CSV import.
+  // Each tuple: (name, category, price, printerNumber, available)
+  // Returns the number of items successfully added.
+  public shared ({ caller }) func bulkAddMenuItems(items : [(Text, Text, Nat, Nat, Bool)]) : async Nat {
+    var count = 0;
+    items.forEach(func((name, category, price, printerNumber, available)) {
+      let id = nextMenuItemId;
+      nextMenuItemId += 1;
+      menuItems.add(id, { id; name; category; price; printerNumber; available });
+      count += 1;
+    });
+    count;
+  };
+
+  // Returns all current menu items as a stable snapshot array — safe backup.
+  public query func getMenuBackup() : async [(Nat, Text, Text, Nat, Nat, Bool)] {
+    menuItems.values().toArray().map<MenuItem, (Nat, Text, Text, Nat, Nat, Bool)>(
+      func(item) { (item.id, item.name, item.category, item.price, item.printerNumber, item.available) }
+    );
+  };
+
+  // Returns all menu items as CSV text: Name,Category,Price,PrinterNumber,Available
+  public query func exportMenuCSV() : async Text {
+    let header = "Name,Category,Price,PrinterNumber,Available";
+    let rows = menuItems.values().toArray().map(
+      func(item) {
+        item.name # "," # item.category # "," # item.price.toText() # "," # item.printerNumber.toText() # "," # (if (item.available) "true" else "false")
+      }
+    );
+    let allRows = [header].concat(rows);
+    allRows.values().join("\n");
+  };
+
   // ── Orders ──────────────────────────────────────────────────────
 
   public shared ({ caller }) func placeOrder(order : OrderInput) : async Nat {

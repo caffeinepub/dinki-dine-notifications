@@ -1,0 +1,71 @@
+// Version: 1.0.0
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type MenuItem__727296599 =
+  {
+    available : Bool;
+    category : Text;
+    id : Nat;
+    name : Text;
+    price : Nat;
+    printerNumber : Nat
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Notification__879889657 =
+  {
+    acknowledged : Bool;
+    id : Nat;
+    message : Text;
+    orderId : Nat;
+    timestamp : Timestamp__672038077
+  };
+type OrderItem__592186033 = {name : Text; price : Nat; quantity : Nat};
+type OrderStatus__838108808 =
+  {#cancelled; #fulfilled; #pending; #preparing; #ready};
+type Order__762448211 =
+  {
+    cancellationReason : Text;
+    customerMobile : Text;
+    discount : Nat;
+    discountType : Text;
+    id : Nat;
+    items : [OrderItem__592186033];
+    status : OrderStatus__838108808;
+    timestamp : Timestamp__672038077;
+    vehicleInfo : VehicleInfo__632575867
+  };
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type Timestamp__672038077 = Time__900049286;
+type VehicleInfo__632575867 =
+  {color : Text; licensePlate : Text; make : Text; model : Text};
+actor {
+  stable var DEFAULT_MENU : [(Text, Text, Nat, Nat)];
+  stable menuItems :
+    {
+      var root : Node__46230540<Nat, MenuItem__727296599>;
+      var size : Nat__490723111
+    };
+  stable var menuSeeded : Bool;
+  stable var nextMenuItemId : Nat;
+  stable var nextNotificationId : Nat;
+  stable var nextOrderId : Nat;
+  stable notifications :
+    {
+      var root : Node__46230540<Nat, Notification__879889657>;
+      var size : Nat__490723111
+    };
+  stable orders :
+    {
+      var root : Node__46230540<Nat, Order__762448211>;
+      var size : Nat__490723111
+    }
+};

@@ -71,12 +71,21 @@ export interface _SERVICE {
     undefined
   >,
   'addMenuItem' : ActorMethod<[string, string, bigint, bigint], bigint>,
+  'bulkAddMenuItems' : ActorMethod<
+    [Array<[string, string, bigint, bigint, boolean]>],
+    bigint
+  >,
   'cancelOrder' : ActorMethod<[bigint, string], undefined>,
   'clearAllData' : ActorMethod<[], undefined>,
   'clearAllNotifications' : ActorMethod<[], undefined>,
   'clearAllOrders' : ActorMethod<[], undefined>,
   'deleteMenuItem' : ActorMethod<[bigint], undefined>,
+  'exportMenuCSV' : ActorMethod<[], string>,
   'getAllOrders' : ActorMethod<[], Array<Order>>,
+  'getMenuBackup' : ActorMethod<
+    [],
+    Array<[bigint, string, string, bigint, bigint, boolean]>
+  >,
   'getMenuItems' : ActorMethod<[], Array<MenuItem>>,
   'getNotifications' : ActorMethod<[], Array<Notification>>,
   'getOrderById' : ActorMethod<[bigint], Order>,

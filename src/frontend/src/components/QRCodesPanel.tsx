@@ -5,6 +5,7 @@ import {
   ExternalLink,
   Printer,
   QrCode,
+  Star,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -19,9 +20,22 @@ interface QREntry {
   colorClass: string;
   borderClass: string;
   labelColorClass: string;
+  featured?: boolean;
 }
 
 const QR_ENTRIES: QREntry[] = [
+  {
+    id: "landing",
+    label: "Customer Landing Page",
+    description:
+      "The main QR code for your restaurant. Customers choose Dine-In, Drive-In, Takeaway, or View Menu from one beautiful page.",
+    url: `${APP_BASE}/?mode=qrlanding`,
+    icon: "⭐",
+    colorClass: "bg-gradient-to-br from-orange-500/15 to-amber-500/10",
+    borderClass: "border-orange-400/50",
+    labelColorClass: "text-orange-400",
+    featured: true,
+  },
   {
     id: "dine-in",
     label: "Dine-In Customer Ordering",
@@ -78,7 +92,6 @@ function QRCard({ entry }: { entry: QREntry }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (_e) {
-      // fallback
       const el = document.createElement("textarea");
       el.value = entry.url;
       document.body.appendChild(el);
@@ -104,6 +117,7 @@ function QRCard({ entry }: { entry: QREntry }) {
             p { font-size: 13px; color: #555; margin-bottom: 20px; }
             img { width: 240px; height: 240px; margin: 0 auto; display: block; }
             .url { font-size: 11px; color: #888; margin-top: 12px; word-break: break-all; }
+            .brand { font-size: 16px; font-weight: bold; color: #ea580c; margin-top: 16px; }
             @media print { .no-print { display: none; } }
           </style>
         </head>
@@ -112,6 +126,7 @@ function QRCard({ entry }: { entry: QREntry }) {
           <p>${entry.description}</p>
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(entry.url)}" alt="QR Code" />
           <div class="url">${entry.url}</div>
+          <div class="brand">Dinki Pos</div>
           <br/>
           <button class="no-print" onclick="window.print()" style="padding:8px 20px;font-size:14px;">Print</button>
         </body>
@@ -124,15 +139,21 @@ function QRCard({ entry }: { entry: QREntry }) {
   return (
     <div
       data-ocid="qr_codes.card"
-      className={`rounded-xl border p-4 flex flex-col gap-4 ${entry.colorClass} ${entry.borderClass}`}
+      className={`rounded-xl border-2 p-4 flex flex-col gap-4 ${entry.colorClass} ${entry.borderClass} ${entry.featured ? "shadow-md" : ""}`}
     >
-      {/* Label */}
+      {/* Label row */}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">{entry.icon}</span>
-          <h3 className={`text-sm font-bold ${entry.labelColorClass}`}>
+          <h3 className={`text-sm font-bold ${entry.labelColorClass} flex-1`}>
             {entry.label}
           </h3>
+          {entry.featured && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full px-2 py-0.5 flex-shrink-0">
+              <Star className="w-2.5 h-2.5 fill-current" />
+              Recommended
+            </span>
+          )}
         </div>
         <p className="text-xs text-din-muted leading-relaxed">
           {entry.description}
@@ -141,7 +162,9 @@ function QRCard({ entry }: { entry: QREntry }) {
 
       {/* QR Code */}
       <div className="flex justify-center">
-        <div className="bg-white rounded-xl p-3 shadow-sm">
+        <div
+          className={`bg-white rounded-xl p-3 shadow-sm ${entry.featured ? "ring-2 ring-orange-400/30" : ""}`}
+        >
           <img
             src={qrUrl}
             alt={`QR for ${entry.label}`}
@@ -222,19 +245,30 @@ export function QRCodesPanel({ onBack }: QRCodesPanelProps) {
           </button>
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5 text-din-teal" />
-            <h1 className="text-base font-bold text-din-text">
-              QR Codes &amp; Links
-            </h1>
+            <div>
+              <h1 className="text-base font-bold text-din-text leading-none">
+                QR Codes &amp; Customer Links
+              </h1>
+              <p className="text-[11px] text-din-muted mt-0.5">
+                Print these for your restaurant
+              </p>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-        <p className="text-sm text-din-muted mb-6">
-          Share these QR codes and links with your customers. Print and place
-          them at tables, parking spots, or on receipts.
-        </p>
+        {/* Tip Banner */}
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
+          <Star className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-din-muted leading-relaxed">
+            <span className="font-semibold text-orange-400">Tip:</span> Print
+            the <strong className="text-din-text">Customer Landing Page</strong>{" "}
+            QR and place it on all tables and at the entrance. Customers can
+            pick their ordering mode from one page.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {QR_ENTRIES.map((entry) => (

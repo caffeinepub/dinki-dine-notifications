@@ -77,12 +77,27 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'bulkAddMenuItems' : IDL.Func(
+      [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool))],
+      [IDL.Nat],
+      [],
+    ),
   'cancelOrder' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'clearAllData' : IDL.Func([], [], []),
   'clearAllNotifications' : IDL.Func([], [], []),
   'clearAllOrders' : IDL.Func([], [], []),
   'deleteMenuItem' : IDL.Func([IDL.Nat], [], []),
+  'exportMenuCSV' : IDL.Func([], [IDL.Text], ['query']),
   'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+  'getMenuBackup' : IDL.Func(
+      [],
+      [
+        IDL.Vec(
+          IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool)
+        ),
+      ],
+      ['query'],
+    ),
   'getMenuItems' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
   'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
   'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),
@@ -182,12 +197,27 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'bulkAddMenuItems' : IDL.Func(
+        [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool))],
+        [IDL.Nat],
+        [],
+      ),
     'cancelOrder' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'clearAllData' : IDL.Func([], [], []),
     'clearAllNotifications' : IDL.Func([], [], []),
     'clearAllOrders' : IDL.Func([], [], []),
     'deleteMenuItem' : IDL.Func([IDL.Nat], [], []),
+    'exportMenuCSV' : IDL.Func([], [IDL.Text], ['query']),
     'getAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+    'getMenuBackup' : IDL.Func(
+        [],
+        [
+          IDL.Vec(
+            IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Bool)
+          ),
+        ],
+        ['query'],
+      ),
     'getMenuItems' : IDL.Func([], [IDL.Vec(MenuItem)], ['query']),
     'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
     'getOrderById' : IDL.Func([IDL.Nat], [Order], ['query']),

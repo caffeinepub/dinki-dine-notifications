@@ -67,12 +67,15 @@ export interface backendInterface {
     acknowledgeNotification(notificationId: bigint): Promise<void>;
     addItemsToOrder(orderId: bigint, newItems: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
     addMenuItem(name: string, category: string, price: bigint, printerNumber: bigint): Promise<bigint>;
+    bulkAddMenuItems(items: Array<[string, string, bigint, bigint, boolean]>): Promise<bigint>;
     cancelOrder(orderId: bigint, reason: string): Promise<void>;
     clearAllData(): Promise<void>;
     clearAllNotifications(): Promise<void>;
     clearAllOrders(): Promise<void>;
     deleteMenuItem(id: bigint): Promise<void>;
+    exportMenuCSV(): Promise<string>;
     getAllOrders(): Promise<Array<Order>>;
+    getMenuBackup(): Promise<Array<[bigint, string, string, bigint, bigint, boolean]>>;
     getMenuItems(): Promise<Array<MenuItem>>;
     getNotifications(): Promise<Array<Notification>>;
     getOrderById(id: bigint): Promise<Order>;

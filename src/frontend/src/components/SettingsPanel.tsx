@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
   ChevronLeft,
   FileText,
@@ -40,9 +41,8 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Order, OrderItem } from "../backend";
-import { OrderStatus } from "../backend";
+import { OrderStatus, createActor } from "../backend";
 import type { backendInterface } from "../backend";
-import { useActor } from "../hooks/useActor";
 import { InvoiceEditModal } from "./InvoiceEditModal";
 
 const PERMISSIONS_KEY = "dinki_role_permissions";
@@ -320,7 +320,7 @@ export function SettingsPanel({
   orders = [],
   onEditOrder,
 }: SettingsPanelProps) {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [permissions, setPermissions] =
     useState<PermissionMap>(loadPermissions);
   const [clearing, setClearing] = useState(false);

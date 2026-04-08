@@ -30,9 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
   ArrowLeft,
   Clock,
+  Database,
   Download,
   Loader2,
   Pencil,
@@ -45,7 +47,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { backendInterface } from "../backend";
-import { useActor } from "../hooks/useActor";
+import { createActor } from "../backend";
 import type { MenuItem } from "../types/menu";
 
 const CATEGORIES = [
@@ -122,21 +124,19 @@ function parseTime(s: string): [number, number] | null {
 
 function getActiveRole(): string {
   try {
-    // If a specific staff member was selected at login, use their role
     const session = localStorage.getItem("dinki_active_staff");
     if (session) {
       const staff = JSON.parse(session);
       return staff?.role ?? "Manager";
     }
   } catch {}
-  // Default: treat as Manager (full access) when using single admin PIN
   return "Manager";
 }
 
 function hasPermission(permKey: string): boolean {
   try {
     const permsStr = localStorage.getItem(PERMISSIONS_KEY);
-    if (!permsStr) return true; // default allow if no permissions configured
+    if (!permsStr) return true;
     const perms = JSON.parse(permsStr);
     const role = getActiveRole();
     return perms[role]?.[permKey] ?? true;
@@ -144,6 +144,45 @@ function hasPermission(permKey: string): boolean {
     return true;
   }
 }
+
+/**
+ * Parse a single CSV line correctly, handling quoted fields with embedded commas.
+ * Returns an array of unquoted, trimmed field strings.
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      // Handle escaped double quotes ""
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+/**
+ * Parse the Available column: "true", "1", "yes" (case-insensitive) → true; anything else → false
+ */
+function parseAvailable(value: string): boolean {
+  const v = value.trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
+}
+
 const DEFAULT_PIN = "1234";
 
 interface MenuAdminProps {
@@ -405,13 +444,15 @@ function EditableRow({
 
 // ── Main MenuAdmin ─────────────────────────────────────────────
 export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [unlocked, setUnlocked] = useState(
     () => localStorage.getItem(PIN_KEY) === "1",
   );
   const [editingId, setEditingId] = useState<bigint | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [backupDownloading, setBackupDownloading] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const backendActor = actor as unknown as backendInterface;
@@ -421,7 +462,6 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
   const canMarkSold = hasPermission("Mark Sold");
   const canChangeTiming = hasPermission("Change Timing");
 
-  // Reload permission check on mount (in case staff session changed)
   useEffect(() => {
     setCategorySlots(loadCategorySlots());
   }, []);
@@ -526,65 +566,131 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
     const header = "Name,Category,Price,PrinterNumber,Available";
     const rows = menuItems.map(
       (i) =>
-        `"${i.name}","${i.category}",${Number(i.price)},${Number(i.printerNumber)},${i.available ? "Yes" : "No"}`,
+        `"${i.name.replace(/"/g, '""')}","${i.category.replace(/"/g, '""')}",${Number(i.price)},${Number(i.printerNumber)},${i.available ? "Yes" : "No"}`,
     );
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "dinki-dine-menu.csv";
+    a.download = "dinki-pos-menu.csv";
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Menu exported as CSV");
   };
 
+  const handleDownloadBackup = async () => {
+    if (!actor) {
+      toast.error("Not connected to backend.");
+      return;
+    }
+    setBackupDownloading(true);
+    try {
+      const csvText = await backendActor.exportMenuCSV();
+      const blob = new Blob([csvText], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dinki-pos-menu-backup-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Menu backup downloaded from backend");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to download backup");
+    } finally {
+      setBackupDownloading(false);
+    }
+  };
+
+  /**
+   * Rewritten CSV import:
+   * - Proper quoted-field CSV parsing (handles embedded commas)
+   * - Reads all 5 columns: Name, Category, Price, PrinterNumber, Available
+   * - Validates before sending: skips blank name, invalid price
+   * - Uses bulkAddMenuItems() for efficient batch upload
+   * - Shows progress and a summary toast
+   */
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !actor) return;
     setCsvImporting(true);
+    setCsvProgress("Reading file…");
     try {
       const text = await file.text();
       const lines = text
-        .split("\n")
+        .split(/\r?\n/)
         .map((l) => l.trim())
         .filter(Boolean);
-      const dataLines = lines.slice(1);
-      let count = 0;
-      for (const line of dataLines) {
-        const cols =
-          line
-            .match(/(?:"([^"]*)"|([^,]*))/g)
-            ?.map((c) => c.replace(/^"|"$/g, "").trim()) ?? [];
-        if (cols.length < 4) continue;
-        const [name, category, priceStr, printerStr] = cols;
-        const price = Number.parseFloat(priceStr ?? "");
-        const printer = Number.parseInt(printerStr ?? "1", 10);
-        if (
-          !name ||
-          !category ||
-          Number.isNaN(price) ||
-          price <= 0 ||
-          Number.isNaN(printer)
-        )
+
+      if (lines.length < 2) {
+        toast.error("CSV file is empty or has no data rows.");
+        return;
+      }
+
+      const dataLines = lines.slice(1); // skip header
+      const validItems: Array<[string, string, bigint, bigint, boolean]> = [];
+      const skipped: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const cols = parseCSVLine(dataLines[i]);
+        const name = cols[0] ?? "";
+        const category = cols[1] ?? "";
+        const priceStr = cols[2] ?? "";
+        const printerStr = cols[3] ?? "1";
+        const availableStr = cols[4] ?? "true";
+
+        if (!name) {
+          skipped.push(`Row ${i + 2}: empty name`);
           continue;
-        await backendActor.addMenuItem(
+        }
+        const price = Number.parseFloat(priceStr);
+        if (Number.isNaN(price) || price < 0) {
+          skipped.push(`Row ${i + 2}: invalid price "${priceStr}"`);
+          continue;
+        }
+        if (!category) {
+          skipped.push(`Row ${i + 2}: missing category`);
+          continue;
+        }
+        const printer = Number.parseInt(printerStr, 10);
+        const printerNum =
+          Number.isNaN(printer) || printer < 1 || printer > 4 ? 1 : printer;
+        const available = parseAvailable(availableStr);
+
+        validItems.push([
           name,
           category,
           BigInt(Math.round(price)),
-          BigInt(printer),
-        );
-        count++;
+          BigInt(printerNum),
+          available,
+        ]);
       }
+
+      if (validItems.length === 0) {
+        toast.error(`No valid rows found. ${skipped.length} row(s) skipped.`);
+        return;
+      }
+
+      setCsvProgress(`Importing ${validItems.length} items…`);
+      await backendActor.bulkAddMenuItems(validItems);
       await onReload();
+
+      const skippedMsg =
+        skipped.length > 0 ? ` ${skipped.length} row(s) skipped.` : "";
       toast.success(
-        `Imported ${count} item${count !== 1 ? "s" : ""} successfully`,
+        `Imported ${validItems.length} item${validItems.length !== 1 ? "s" : ""} successfully.${skippedMsg}`,
       );
+
+      if (skipped.length > 0) {
+        console.info("CSV import skipped rows:", skipped);
+      }
     } catch (e) {
       console.error(e);
-      toast.error("CSV import failed. Check the format.");
+      toast.error("CSV import failed. Check the file format and try again.");
     } finally {
       setCsvImporting(false);
+      setCsvProgress("");
       if (csvInputRef.current) csvInputRef.current.value = "";
     }
   };
@@ -632,11 +738,16 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
             className="h-8 text-xs border-din-border text-din-muted hover:bg-din-surface-alt"
           >
             {csvImporting ? (
-              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              <>
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                {csvProgress || "Importing…"}
+              </>
             ) : (
-              <Upload className="w-3.5 h-3.5 mr-1" />
+              <>
+                <Upload className="w-3.5 h-3.5 mr-1" />
+                Import CSV
+              </>
             )}
-            Import CSV
           </Button>
 
           <Button
@@ -648,6 +759,22 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
           >
             <Download className="w-3.5 h-3.5 mr-1" />
             Export CSV
+          </Button>
+
+          <Button
+            data-ocid="menu_admin.secondary_button"
+            size="sm"
+            variant="outline"
+            onClick={handleDownloadBackup}
+            disabled={backupDownloading}
+            className="h-8 text-xs border-din-teal/40 text-din-teal hover:bg-din-teal/10"
+          >
+            {backupDownloading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+            ) : (
+              <Database className="w-3.5 h-3.5 mr-1" />
+            )}
+            Download Backup
           </Button>
 
           <AlertDialog>
@@ -706,9 +833,11 @@ export function MenuAdmin({ menuItems, onBack, onReload }: MenuAdminProps) {
         <code className="text-din-teal">
           Name,Category,Price,PrinterNumber,Available
         </code>
-        &nbsp;— Category must be one of: Hot n Hot, Dosa, Breakfast, Chaat, Ice
-        cream novelties, Ice cream cups n packs, Juice n Shakes, Soup, Starter,
-        Roti (Bread), Main course, Rice n Noodles, Softdrinks, Grill n spice
+        &nbsp;— Category must match existing categories. Available: Yes/No or
+        1/0. Quoted fields supported (e.g.{" "}
+        <code className="text-din-teal">"Paneer, Special"</code>). Use{" "}
+        <strong className="text-din-text">Download Backup</strong> to recover
+        your full menu.
       </div>
 
       {/* Category Tabs */}

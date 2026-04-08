@@ -1,0 +1,108 @@
+type VehicleInfo = 
+ record {
+   color: text;
+   licensePlate: text;
+   make: text;
+   model: text;
+ };
+type Timestamp = int;
+type OrderStatus = 
+ variant {
+   cancelled;
+   fulfilled;
+   pending;
+   preparing;
+   ready;
+ };
+type OrderItem = 
+ record {
+   name: text;
+   price: nat;
+   quantity: nat;
+ };
+type OrderInput = 
+ record {
+   customerMobile: text;
+   discount: nat;
+   discountType: text;
+   id: nat;
+   items: vec OrderItem;
+   status: OrderStatus;
+   timestamp: Timestamp;
+   vehicleInfo: VehicleInfo;
+ };
+type Order = 
+ record {
+   cancellationReason: text;
+   customerMobile: text;
+   discount: nat;
+   discountType: text;
+   id: nat;
+   items: vec OrderItem;
+   status: OrderStatus;
+   timestamp: Timestamp;
+   vehicleInfo: VehicleInfo;
+ };
+type Notification = 
+ record {
+   acknowledged: bool;
+   id: nat;
+   message: text;
+   orderId: nat;
+   timestamp: Timestamp;
+ };
+type MenuItem = 
+ record {
+   available: bool;
+   category: text;
+   id: nat;
+   name: text;
+   price: nat;
+   printerNumber: nat;
+ };
+service : {
+  acknowledgeAllNotifications: () -> ();
+  acknowledgeNotification: (notificationId: nat) -> ();
+  addItemsToOrder: (orderId: nat, newItems: vec OrderItem, packingCharge:
+   nat, deliveryCharge: nat) -> ();
+  addMenuItem: (name: text, category: text, price: nat, printerNumber:
+   nat) -> (nat);
+  bulkAddMenuItems: (items: vec record {
+                                  text;
+                                  text;
+                                  nat;
+                                  nat;
+                                  bool;
+                                }) -> (nat);
+  cancelOrder: (orderId: nat, reason: text) -> ();
+  clearAllData: () -> ();
+  clearAllNotifications: () -> ();
+  clearAllOrders: () -> ();
+  deleteMenuItem: (id: nat) -> ();
+  exportMenuCSV: () -> (text) query;
+  getAllOrders: () -> (vec Order) query;
+  getMenuBackup: () -> (vec record {
+                              nat;
+                              text;
+                              text;
+                              nat;
+                              nat;
+                              bool;
+                            }) query;
+  getMenuItems: () -> (vec MenuItem) query;
+  getNotifications: () -> (vec Notification) query;
+  getOrderById: (id: nat) -> (Order) query;
+  getPendingOrders: () -> (vec Order) query;
+  getUnacknowledgedCount: () -> (nat) query;
+  getUnacknowledgedNotifications: () -> (vec Notification) query;
+  initMenu: () -> ();
+  placeOrder: (order: OrderInput) -> (nat);
+  resetMenuToDefaults: () -> ();
+  updateMenuItem: (id: nat, name: text, category: text, price: nat,
+   printerNumber: nat, available: bool) -> ();
+  updateOrderDiscount: (orderId: nat, discount: nat, discountType: text) ->
+   ();
+  updateOrderItems: (orderId: nat, items: vec OrderItem, packingCharge: 
+   nat, deliveryCharge: nat) -> ();
+  updateOrderStatus: (orderId: nat, status: OrderStatus) -> ();
+}

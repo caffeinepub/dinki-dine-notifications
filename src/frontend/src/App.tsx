@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
   Activity,
   Bell,
@@ -21,11 +22,18 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { Notification, Order, OrderInput, OrderItem } from "./backend";
-import { OrderStatus } from "./backend";
+import type {
+  Backend,
+  Notification,
+  Order,
+  OrderInput,
+  OrderItem,
+} from "./backend";
+import { OrderStatus, createActor } from "./backend";
 import { AdminPinGate } from "./components/AdminPinGate";
 import { CustomerOrder } from "./components/CustomerOrder";
 import { CustomerOrderUnified } from "./components/CustomerOrderUnified";
+import { CustomerQRLanding } from "./components/CustomerQRLanding";
 import { DayEndReport } from "./components/DayEndReport";
 import { DriveInMenuDisplay } from "./components/DriveInMenuDisplay";
 import { InvoiceListScreen } from "./components/InvoiceListScreen";
@@ -43,7 +51,6 @@ import { SideDrawer } from "./components/SideDrawer";
 import { SummaryOfDay } from "./components/SummaryOfDay";
 import { TableGridView } from "./components/TableGridView";
 import { UserManagement, logActivity } from "./components/UserManagement";
-import { useActor } from "./hooks/useActor";
 import { useMenu } from "./hooks/useMenu";
 import { loadMutePref, saveMutePref, useSound } from "./hooks/useSound";
 
@@ -55,8 +62,13 @@ const isMenuOnlyMode =
   new URLSearchParams(window.location.search).get("mode") === "menuonly";
 const isUnifiedOrderMode =
   new URLSearchParams(window.location.search).get("mode") === "order";
+const isQRLandingMode =
+  new URLSearchParams(window.location.search).get("mode") === "qrlanding";
 
 export default function App() {
+  if (isQRLandingMode) {
+    return <CustomerQRLanding />;
+  }
   if (isCustomerMode) {
     return <CustomerOrder />;
   }
@@ -135,7 +147,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 function StaffDashboard() {
-  const { actor } = useActor();
+  const { actor } = useActor<Backend>(createActor);
   const { menuItems, reloadMenu } = useMenu();
 
   // liveOrders: only non-fulfilled orders shown on the main Live Orders page

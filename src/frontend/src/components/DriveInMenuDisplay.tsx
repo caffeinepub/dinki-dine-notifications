@@ -1,8 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Clock, Utensils } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useActor } from "../hooks/useActor";
+import { createActor } from "../backend";
 import type { MenuActor, MenuItem } from "../types/menu";
 
 // ── Schedule definitions (read from localStorage if set by MenuAdmin) ──────────
@@ -87,7 +88,7 @@ const CATEGORY_ACCENT: Record<string, string> = {
 };
 
 export function DriveInMenuDisplay() {
-  const { actor } = useActor();
+  const { actor } = useActor(createActor);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
