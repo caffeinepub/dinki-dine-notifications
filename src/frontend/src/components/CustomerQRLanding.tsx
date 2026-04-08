@@ -7,14 +7,12 @@ import {
   Utensils,
 } from "lucide-react";
 
-const APP_BASE = "https://dinki-dine-drive-in-pos-v3v.caffeine.xyz";
-
 interface LandingCard {
   icon: React.ReactNode;
   emoji: string;
   title: string;
   subtitle: string;
-  url: string;
+  path: string;
   gradient: string;
   iconBg: string;
 }
@@ -25,7 +23,7 @@ const CARDS: LandingCard[] = [
     emoji: "🍽️",
     title: "Dine-In Order",
     subtitle: "Order from your table — pick your table and browse the menu",
-    url: `${APP_BASE}/?mode=customer`,
+    path: "/?mode=customer",
     gradient: "from-orange-500 to-orange-400",
     iconBg: "bg-orange-100 text-orange-600",
   },
@@ -34,7 +32,7 @@ const CARDS: LandingCard[] = [
     emoji: "🚗",
     title: "Drive-In Order",
     subtitle: "Order from your car — just enter your car number",
-    url: `${APP_BASE}/?mode=drivein`,
+    path: "/?mode=drivein",
     gradient: "from-amber-500 to-amber-400",
     iconBg: "bg-amber-100 text-amber-600",
   },
@@ -43,7 +41,7 @@ const CARDS: LandingCard[] = [
     emoji: "🛍️",
     title: "Takeaway / Delivery",
     subtitle: "Order for pickup or home delivery",
-    url: `${APP_BASE}/?mode=order`,
+    path: "/?mode=order",
     gradient: "from-green-500 to-emerald-400",
     iconBg: "bg-green-100 text-green-600",
   },
@@ -52,13 +50,15 @@ const CARDS: LandingCard[] = [
     emoji: "📋",
     title: "View Menu Only",
     subtitle: "Browse our full menu without placing an order",
-    url: `${APP_BASE}/?mode=menuonly`,
+    path: "/?mode=menuonly",
     gradient: "from-blue-500 to-blue-400",
     iconBg: "bg-blue-100 text-blue-600",
   },
 ];
 
 export function CustomerQRLanding() {
+  const origin = window.location.origin;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Header */}
@@ -106,43 +106,46 @@ export function CustomerQRLanding() {
         </p>
 
         <div className="space-y-3">
-          {CARDS.map((card) => (
-            <a
-              key={card.url}
-              href={card.url}
-              data-ocid="qr_landing.card"
-              className="group block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all duration-200 overflow-hidden"
-            >
-              <div className="flex items-center p-4 gap-4">
-                {/* Icon */}
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${card.iconBg} group-hover:scale-105 transition-transform`}
-                >
-                  {card.icon}
-                </div>
+          {CARDS.map((card) => {
+            const fullUrl = `${origin}${card.path}`;
+            return (
+              <a
+                key={card.path}
+                href={fullUrl}
+                data-ocid="qr_landing.card"
+                className="group block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all duration-200 overflow-hidden"
+              >
+                <div className="flex items-center p-4 gap-4">
+                  {/* Icon */}
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${card.iconBg} group-hover:scale-105 transition-transform`}
+                  >
+                    {card.icon}
+                  </div>
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{card.emoji}</span>
-                    <p className="font-bold text-gray-800 text-sm truncate">
-                      {card.title}
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{card.emoji}</span>
+                      <p className="font-bold text-gray-800 text-sm truncate">
+                        {card.title}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      {card.subtitle}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                    {card.subtitle}
-                  </p>
-                </div>
 
-                {/* Arrow */}
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${card.gradient} text-white group-hover:scale-110 transition-transform shadow-sm`}
-                >
-                  <ChevronRight className="w-4 h-4" />
+                  {/* Arrow */}
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${card.gradient} text-white group-hover:scale-110 transition-transform shadow-sm`}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
-              </div>
-            </a>
-          ))}
+              </a>
+            );
+          })}
         </div>
 
         <p className="mt-8 text-xs text-gray-400 text-center">

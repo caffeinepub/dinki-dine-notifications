@@ -9,13 +9,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const APP_BASE = "https://dinki-dine-drive-in-pos-v3v.caffeine.xyz";
-
 interface QREntry {
   id: string;
   label: string;
   description: string;
-  url: string;
+  path: string;
   icon: string;
   colorClass: string;
   borderClass: string;
@@ -23,13 +21,13 @@ interface QREntry {
   featured?: boolean;
 }
 
-const QR_ENTRIES: QREntry[] = [
+const QR_DEFS: QREntry[] = [
   {
     id: "landing",
     label: "Customer Landing Page",
     description:
       "The main QR code for your restaurant. Customers choose Dine-In, Drive-In, Takeaway, or View Menu from one beautiful page.",
-    url: `${APP_BASE}/?mode=qrlanding`,
+    path: "/?mode=qrlanding",
     icon: "⭐",
     colorClass: "bg-gradient-to-br from-orange-500/15 to-amber-500/10",
     borderClass: "border-orange-400/50",
@@ -40,7 +38,7 @@ const QR_ENTRIES: QREntry[] = [
     id: "dine-in",
     label: "Dine-In Customer Ordering",
     description: "Customers scan this QR code to order from their table.",
-    url: `${APP_BASE}/?mode=customer`,
+    path: "/?mode=customer",
     icon: "🍽️",
     colorClass: "bg-teal-500/10",
     borderClass: "border-teal-500/30",
@@ -51,7 +49,7 @@ const QR_ENTRIES: QREntry[] = [
     label: "Drive-In Self-Ordering",
     description:
       "Customers scan to place orders from their car. Car number required.",
-    url: `${APP_BASE}/?mode=drivein`,
+    path: "/?mode=drivein",
     icon: "🚗",
     colorClass: "bg-yellow-500/10",
     borderClass: "border-yellow-500/30",
@@ -62,7 +60,7 @@ const QR_ENTRIES: QREntry[] = [
     label: "Menu Display (View Only)",
     description:
       "Browse-only menu — no ordering. Perfect for customers to check items before approaching the counter.",
-    url: `${APP_BASE}/?mode=menuonly`,
+    path: "/?mode=menuonly",
     icon: "👁️",
     colorClass: "bg-orange-500/10",
     borderClass: "border-orange-500/30",
@@ -73,7 +71,7 @@ const QR_ENTRIES: QREntry[] = [
     label: "Unified Order Page",
     description:
       "Single page for Drive-In, Takeaway, and Delivery — share with all customers.",
-    url: `${APP_BASE}/?mode=order`,
+    path: "/?mode=order",
     icon: "📱",
     colorClass: "bg-blue-500/10",
     borderClass: "border-blue-500/30",
@@ -81,19 +79,29 @@ const QR_ENTRIES: QREntry[] = [
   },
 ];
 
+function getFullUrl(path: string): string {
+  return `${window.location.origin}${path}`;
+}
+
+function buildQRImageUrl(targetUrl: string, size: number): string {
+  // Use qrserver.com with cache-busting timestamp so QR always regenerates fresh
+  const ts = Math.floor(Date.now() / 60000); // changes every minute
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(targetUrl)}&_t=${ts}`;
+}
+
 function QRCard({ entry }: { entry: QREntry }) {
   const [copied, setCopied] = useState(false);
-
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(entry.url)}`;
+  const fullUrl = getFullUrl(entry.path);
+  const qrUrl = buildQRImageUrl(fullUrl, 180);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(entry.url);
+      await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (_e) {
       const el = document.createElement("textarea");
-      el.value = entry.url;
+      el.value = fullUrl;
       document.body.appendChild(el);
       el.select();
       document.execCommand("copy");
@@ -106,6 +114,7 @@ function QRCard({ entry }: { entry: QREntry }) {
   const handlePrint = () => {
     const win = window.open("", "_blank");
     if (!win) return;
+    const printQrUrl = buildQRImageUrl(fullUrl, 300);
     win.document.write(`
       <!DOCTYPE html>
       <html>
@@ -115,25 +124,25 @@ function QRCard({ entry }: { entry: QREntry }) {
             body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
             h1 { font-size: 20px; margin-bottom: 8px; }
             p { font-size: 13px; color: #555; margin-bottom: 20px; }
-            img { width: 240px; height: 240px; margin: 0 auto; display: block; }
+            img { width: 300px; height: 300px; margin: 0 auto; display: block; }
             .url { font-size: 11px; color: #888; margin-top: 12px; word-break: break-all; }
-            .brand { font-size: 16px; font-weight: bold; color: #ea580c; margin-top: 16px; }
+            .brand { font-size: 18px; font-weight: bold; color: #ea580c; margin-top: 16px; }
             @media print { .no-print { display: none; } }
           </style>
         </head>
         <body>
+          <div class="brand">Dinki Pos</div>
           <h1>${entry.icon} ${entry.label}</h1>
           <p>${entry.description}</p>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(entry.url)}" alt="QR Code" />
-          <div class="url">${entry.url}</div>
-          <div class="brand">Dinki Pos</div>
+          <img src="${printQrUrl}" alt="QR Code" />
+          <div class="url">${fullUrl}</div>
           <br/>
           <button class="no-print" onclick="window.print()" style="padding:8px 20px;font-size:14px;">Print</button>
         </body>
       </html>
     `);
     win.document.close();
-    setTimeout(() => win.print(), 500);
+    setTimeout(() => win.print(), 600);
   };
 
   return (
@@ -160,7 +169,7 @@ function QRCard({ entry }: { entry: QREntry }) {
         </p>
       </div>
 
-      {/* QR Code */}
+      {/* QR Code — dynamically generated from current window.location.origin */}
       <div className="flex justify-center">
         <div
           className={`bg-white rounded-xl p-3 shadow-sm ${entry.featured ? "ring-2 ring-orange-400/30" : ""}`}
@@ -171,14 +180,13 @@ function QRCard({ entry }: { entry: QREntry }) {
             width={180}
             height={180}
             className="rounded"
-            loading="lazy"
           />
         </div>
       </div>
 
-      {/* URL */}
+      {/* URL — shows real dynamic URL */}
       <p className="text-[10px] text-din-muted/70 break-all font-mono text-center">
-        {entry.url}
+        {fullUrl}
       </p>
 
       {/* Actions */}
@@ -202,7 +210,7 @@ function QRCard({ entry }: { entry: QREntry }) {
           )}
         </button>
         <a
-          href={entry.url}
+          href={fullUrl}
           target="_blank"
           rel="noopener noreferrer"
           data-ocid="qr_codes.link"
@@ -265,13 +273,13 @@ export function QRCodesPanel({ onBack }: QRCodesPanelProps) {
           <p className="text-xs text-din-muted leading-relaxed">
             <span className="font-semibold text-orange-400">Tip:</span> Print
             the <strong className="text-din-text">Customer Landing Page</strong>{" "}
-            QR and place it on all tables and at the entrance. Customers can
-            pick their ordering mode from one page.
+            QR and place it on all tables and at the entrance. All QR codes use
+            your live app URL automatically.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {QR_ENTRIES.map((entry) => (
+          {QR_DEFS.map((entry) => (
             <QRCard key={entry.id} entry={entry} />
           ))}
         </div>
