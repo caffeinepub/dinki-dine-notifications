@@ -840,19 +840,41 @@ export function SettingsPanel({
                 </div>
 
                 {printer.connectionType === "Bluetooth" && (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-din-muted">
-                      MAC Address
-                    </Label>
-                    <Input
-                      data-ocid={`settings.input.${idx + 1}`}
-                      value={printer.macAddress}
-                      onChange={(e) =>
-                        updatePrinter(idx, "macAddress", e.target.value)
-                      }
-                      placeholder="00:11:22:33:44:55"
-                      className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
-                    />
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-din-muted">
+                        MAC Address (reference only)
+                      </Label>
+                      <Input
+                        data-ocid={`settings.input.${idx + 1}`}
+                        value={printer.macAddress}
+                        onChange={(e) =>
+                          updatePrinter(idx, "macAddress", e.target.value)
+                        }
+                        placeholder="00:11:22:33:44:55"
+                        className="h-7 text-xs bg-din-surface border-din-border text-din-text font-mono"
+                      />
+                    </div>
+                    {/* Bluetooth not-supported notice */}
+                    <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2">
+                      <span className="text-yellow-400 text-sm mt-0.5 flex-shrink-0">
+                        ⚠️
+                      </span>
+                      <p className="text-[11px] text-yellow-300 leading-relaxed">
+                        <span className="font-semibold">
+                          Bluetooth printing is not supported by web browsers.
+                        </span>{" "}
+                        The Web Bluetooth API required for direct Bluetooth
+                        printing is unavailable on most browsers and platforms.
+                        For automatic KOT/invoice printing, use{" "}
+                        <span className="font-semibold">WiFi</span> (network
+                        printer IP), <span className="font-semibold">USB</span>{" "}
+                        (network-connected), or{" "}
+                        <span className="font-semibold">Cloud</span> connection
+                        types instead. You can still save the MAC address here
+                        for manual reference.
+                      </p>
+                    </div>
                   </div>
                 )}
                 {printer.connectionType === "WiFi" && (

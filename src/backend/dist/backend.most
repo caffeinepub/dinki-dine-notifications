@@ -1,4 +1,4 @@
-// Version: 3.0.0
+// Version: 1.0.0
 type Data__791452850<K, V> =
   {var count : Nat__490723111; kvs : [var ?(K, V)]};
 type Int__270357528 = Int__616954475;
@@ -6,10 +6,6 @@ type Int__616954475 = Int;
 type Internal__8484328<K, V> =
   {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
 type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
-type Map__158565046<K, V> = Map__297112838<K, V>;
-type Map__297112838<K, V> =
-  {var root : Node__46230540<K, V>; var size : Nat__490723111};
-type Map__605269027<K, V> = Map__158565046<K, V>;
 type MenuItem__727296599 =
   {
     available : Bool;
@@ -31,41 +27,6 @@ type Notification__879889657 =
     orderId : Nat;
     timestamp : Timestamp__672038077
   };
-type OldMenuItem__1044458944 =
-  {
-    available : Bool;
-    category : Text;
-    id : Nat;
-    name : Text;
-    price : Nat;
-    printerNumber : Nat
-  };
-type OldNotification__868316919 =
-  {
-    acknowledged : Bool;
-    id : Nat;
-    message : Text;
-    orderId : Nat;
-    timestamp : OldTimestamp__27916213
-  };
-type OldOrderItem__518217749 = {name : Text; price : Nat; quantity : Nat};
-type OldOrderStatus__13175761 =
-  {#cancelled; #fulfilled; #pending; #preparing; #ready};
-type OldOrder__235915581 =
-  {
-    cancellationReason : Text;
-    customerMobile : Text;
-    discount : Nat;
-    discountType : Text;
-    id : Nat;
-    items : [OldOrderItem__518217749];
-    status : OldOrderStatus__13175761;
-    timestamp : OldTimestamp__27916213;
-    vehicleInfo : OldVehicleInfo__675056406
-  };
-type OldTimestamp__27916213 = Time__900049286;
-type OldVehicleInfo__675056406 =
-  {color : Text; licensePlate : Text; make : Text; model : Text};
 type OrderItem__592186033 = {name : Text; price : Nat; quantity : Nat};
 type OrderStatus__838108808 =
   {#cancelled; #fulfilled; #pending; #preparing; #ready};
@@ -88,16 +49,7 @@ type Time__900049286 = Time__796480547;
 type Timestamp__672038077 = Time__900049286;
 type VehicleInfo__632575867 =
   {color : Text; licensePlate : Text; make : Text; model : Text};
-actor ({
-  in var DEFAULT_MENU : [(Text, Text, Nat, Nat)];
-  in menuItems : Map__605269027<Nat, OldMenuItem__1044458944>;
-  in var menuSeeded : Bool;
-  in var nextMenuItemId : Nat;
-  in var nextNotificationId : Nat;
-  in var nextOrderId : Nat;
-  in notifications : Map__605269027<Nat, OldNotification__868316919>;
-  in orders : Map__605269027<Nat, OldOrder__235915581>
-}, {
+actor {
   stable var DEFAULT_MENU : [(Text, Text, Nat, Nat)];
   stable menuItems :
     {
@@ -118,4 +70,4 @@ actor ({
       var root : Node__46230540<Nat, Order__762448211>;
       var size : Nat__490723111
     }
-}) ;
+};

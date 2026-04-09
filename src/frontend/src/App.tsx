@@ -805,6 +805,37 @@ function StaffDashboard() {
           />
         </div>
 
+        {/* Quick Order Type Row */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <button
+            type="button"
+            data-ocid="orders.quick_dinein"
+            onClick={() => openNewOrder()}
+            className="flex items-center justify-center gap-2 rounded-xl border border-din-teal/40 bg-din-teal/10 hover:bg-din-teal/20 active:scale-95 px-3 py-3 text-din-teal font-semibold text-sm transition-all shadow-sm"
+          >
+            <UtensilsCrossed className="w-4 h-4 flex-shrink-0" />
+            <span>Dine In</span>
+          </button>
+          <button
+            type="button"
+            data-ocid="orders.quick_takeaway"
+            onClick={() => openNewOrder("takeAway")}
+            className="flex items-center justify-center gap-2 rounded-xl border border-din-orange/40 bg-din-orange/10 hover:bg-din-orange/20 active:scale-95 px-3 py-3 text-din-orange font-semibold text-sm transition-all shadow-sm"
+          >
+            <ShoppingBag className="w-4 h-4 flex-shrink-0" />
+            <span>Take Away</span>
+          </button>
+          <button
+            type="button"
+            data-ocid="orders.quick_drivein"
+            onClick={() => openNewOrder("driveIn")}
+            className="flex items-center justify-center gap-2 rounded-xl border border-din-border bg-din-surface-alt hover:bg-din-surface active:scale-95 px-3 py-3 text-din-text font-semibold text-sm transition-all shadow-sm"
+          >
+            <Car className="w-4 h-4 flex-shrink-0" />
+            <span>Drive In</span>
+          </button>
+        </div>
+
         {/* Mobile: tabs layout */}
         <div className="md:hidden">
           <Tabs defaultValue="orders">
