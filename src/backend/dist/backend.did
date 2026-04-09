@@ -22,9 +22,11 @@ type OrderItem =
  };
 type OrderInput = 
  record {
+   address: text;
    customerMobile: text;
    discount: nat;
    discountType: text;
+   gstNumber: text;
    id: nat;
    items: vec OrderItem;
    status: OrderStatus;
@@ -33,10 +35,12 @@ type OrderInput =
  };
 type Order = 
  record {
+   address: text;
    cancellationReason: text;
    customerMobile: text;
    discount: nat;
    discountType: text;
+   gstNumber: text;
    id: nat;
    items: vec OrderItem;
    status: OrderStatus;
@@ -100,6 +104,8 @@ service : {
   resetMenuToDefaults: () -> ();
   updateMenuItem: (id: nat, name: text, category: text, price: nat,
    printerNumber: nat, available: bool) -> ();
+  updateOrderAddressGST: (orderId: nat, address: text, gstNumber: text) ->
+   (bool);
   updateOrderDiscount: (orderId: nat, discount: nat, discountType: text) ->
    ();
   updateOrderItems: (orderId: nat, items: vec OrderItem, packingCharge: 

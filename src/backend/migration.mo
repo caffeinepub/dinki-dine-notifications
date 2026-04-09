@@ -1,19 +1,19 @@
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
-import Int "mo:core/Int";
 import Time "mo:core/Time";
 
 module {
-  type Timestamp = Time.Time;
+  // ── Old types (from previously deployed canister) ──────────────
+  type OldTimestamp = Time.Time;
 
-  type VehicleInfo = {
+  type OldVehicleInfo = {
     make : Text;
     model : Text;
     color : Text;
     licensePlate : Text;
   };
 
-  type OrderStatus = {
+  type OldOrderStatus = {
     #pending;
     #preparing;
     #ready;
@@ -21,21 +21,33 @@ module {
     #cancelled;
   };
 
-  type OrderItem = {
+  type OldOrderItem = {
     name : Text;
     quantity : Nat;
     price : Nat;
   };
 
-  type Notification = {
+  type OldOrder = {
+    id : Nat;
+    vehicleInfo : OldVehicleInfo;
+    customerMobile : Text;
+    items : [OldOrderItem];
+    timestamp : OldTimestamp;
+    status : OldOrderStatus;
+    discount : Nat;
+    discountType : Text;
+    cancellationReason : Text;
+  };
+
+  type OldNotification = {
     id : Nat;
     orderId : Nat;
     message : Text;
     acknowledged : Bool;
-    timestamp : Timestamp;
+    timestamp : OldTimestamp;
   };
 
-  type MenuItem = {
+  type OldMenuItem = {
     id : Nat;
     name : Text;
     category : Text;
@@ -44,82 +56,59 @@ module {
     available : Bool;
   };
 
-  type OldOrder = {
-    id : Nat;
-    vehicleInfo : VehicleInfo;
-    customerMobile : Text;
-    items : [OrderItem];
-    timestamp : Timestamp;
-    status : {
-      #pending;
-      #preparing;
-      #ready;
-      #fulfilled;
-    };
-  };
-
-  type OldActor = {
-    orders : Map.Map<Nat, OldOrder>;
-    notifications : Map.Map<Nat, Notification>;
-    menuItems : Map.Map<Nat, MenuItem>;
-    nextOrderId : Nat;
-    nextNotificationId : Nat;
-    nextMenuItemId : Nat;
-    menuSeeded : Bool;
-  };
-
+  // ── New types (matching current main.mo) ───────────────────────
   type NewOrder = {
     id : Nat;
-    vehicleInfo : VehicleInfo;
+    vehicleInfo : OldVehicleInfo;
     customerMobile : Text;
-    items : [OrderItem];
-    timestamp : Timestamp;
-    status : {
-      #pending;
-      #preparing;
-      #ready;
-      #fulfilled;
-      #cancelled;
-    };
+    items : [OldOrderItem];
+    timestamp : OldTimestamp;
+    status : OldOrderStatus;
     discount : Nat;
     discountType : Text;
     cancellationReason : Text;
+    address : Text;
+    gstNumber : Text;
+  };
+
+  // ── State record types ─────────────────────────────────────────
+  type OldActor = {
+    orders : Map.Map<Nat, OldOrder>;
+    notifications : Map.Map<Nat, OldNotification>;
+    menuItems : Map.Map<Nat, OldMenuItem>;
+    var nextOrderId : Nat;
+    var nextNotificationId : Nat;
+    var nextMenuItemId : Nat;
+    var menuSeeded : Bool;
+    var DEFAULT_MENU : [(Text, Text, Nat, Nat)];
   };
 
   type NewActor = {
     orders : Map.Map<Nat, NewOrder>;
-    notifications : Map.Map<Nat, Notification>;
-    menuItems : Map.Map<Nat, MenuItem>;
-    nextOrderId : Nat;
-    nextNotificationId : Nat;
-    nextMenuItemId : Nat;
-    menuSeeded : Bool;
+    notifications : Map.Map<Nat, OldNotification>;
+    menuItems : Map.Map<Nat, OldMenuItem>;
+    var nextOrderId : Nat;
+    var nextNotificationId : Nat;
+    var nextMenuItemId : Nat;
+    var menuSeeded : Bool;
+    var DEFAULT_MENU : [(Text, Text, Nat, Nat)];
   };
 
   public func run(old : OldActor) : NewActor {
-    let newOrders = old.orders.map<Nat, OldOrder, NewOrder>(
-      func(_id, oldOrder) {
-        {
-          id = oldOrder.id;
-          vehicleInfo = oldOrder.vehicleInfo;
-          customerMobile = oldOrder.customerMobile;
-          items = oldOrder.items;
-          timestamp = oldOrder.timestamp;
-          status = switch (oldOrder.status) {
-            case (#pending) { #pending };
-            case (#preparing) { #preparing };
-            case (#ready) { #ready };
-            case (#fulfilled) { #fulfilled };
-          };
-          discount = 0;
-          discountType = "flat";
-          cancellationReason = "";
-        };
+    let migratedOrders = old.orders.map<Nat, OldOrder, NewOrder>(
+      func(_id, o) {
+        { o with address = ""; gstNumber = "" }
       }
     );
     {
-      old with
-      orders = newOrders;
+      orders = migratedOrders;
+      notifications = old.notifications;
+      menuItems = old.menuItems;
+      var nextOrderId = old.nextOrderId;
+      var nextNotificationId = old.nextNotificationId;
+      var nextMenuItemId = old.nextMenuItemId;
+      var menuSeeded = old.menuSeeded;
+      var DEFAULT_MENU = old.DEFAULT_MENU;
     };
   };
 };

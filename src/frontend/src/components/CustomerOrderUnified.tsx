@@ -311,6 +311,8 @@ export function CustomerOrderUnified() {
         status: OrderStatus.pending,
         discount: 0n,
         discountType: "flat",
+        address: "",
+        gstNumber: "",
       };
 
       await actor.placeOrder(order);

@@ -9,8 +9,9 @@ import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
 
 import List "mo:core/List";
+import Migration "migration";
 
-
+(with migration = Migration.run)
 actor {
   public type Timestamp = Time.Time;
 
@@ -38,6 +39,8 @@ actor {
     status : OrderStatus;
     discount : Nat;
     discountType : Text; // "flat" or "percent"
+    address : Text;
+    gstNumber : Text;
   };
 
   public type Order = {
@@ -50,6 +53,8 @@ actor {
     discount : Nat;
     discountType : Text; // "flat" or "percent"
     cancellationReason : Text;
+    address : Text;
+    gstNumber : Text;
   };
 
   public type OrderItem = {
@@ -213,6 +218,8 @@ actor {
       discount = order.discount;
       discountType = order.discountType;
       cancellationReason = "";
+      address = order.address;
+      gstNumber = order.gstNumber;
     };
 
     orders.add(orderId, newOrder);
@@ -294,6 +301,16 @@ actor {
           discountType;
         };
         orders.add(orderId, updatedOrder);
+      };
+    };
+  };
+
+  public shared ({ caller }) func updateOrderAddressGST(orderId : Nat, address : Text, gstNumber : Text) : async Bool {
+    switch (orders.get(orderId)) {
+      case (null) { false };
+      case (?order) {
+        orders.add(orderId, { order with address; gstNumber });
+        true;
       };
     };
   };

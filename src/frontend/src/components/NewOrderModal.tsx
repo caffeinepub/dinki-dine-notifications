@@ -87,100 +87,6 @@ function getCategorySlots(): Record<string, TimeSlot[]> {
   return DEFAULT_CATEGORY_SLOTS;
 }
 
-// Use a proxy that reads from localStorage at call time
-const CATEGORY_SLOTS = new Proxy({} as Record<string, TimeSlot[]>, {
-  get(_target, prop: string) {
-    return getCategorySlots()[prop];
-  },
-});
-
-const ALL_MENU_ITEMS: LocalMenuItem[] = [
-  {
-    name: "Pongal",
-    price: 80,
-    category: "Hot n Hot",
-    slots: CATEGORY_SLOTS["Hot n Hot"],
-  },
-  {
-    name: "Masala Dosa",
-    price: 120,
-    category: "Dosa",
-    slots: CATEGORY_SLOTS.Dosa,
-  },
-  {
-    name: "Idli Sambar",
-    price: 90,
-    category: "Breakfast",
-    slots: CATEGORY_SLOTS.Breakfast,
-  },
-  {
-    name: "Pani Puri",
-    price: 60,
-    category: "Chaat",
-    slots: CATEGORY_SLOTS.Chaat,
-  },
-  {
-    name: "Choco Bar",
-    price: 50,
-    category: "Ice cream novelties",
-    slots: CATEGORY_SLOTS["Ice cream novelties"],
-  },
-  {
-    name: "Vanilla Cup",
-    price: 60,
-    category: "Ice cream cups n packs",
-    slots: CATEGORY_SLOTS["Ice cream cups n packs"],
-  },
-  {
-    name: "Fresh Lime Juice",
-    price: 70,
-    category: "Juice n Shakes",
-    slots: CATEGORY_SLOTS["Juice n Shakes"],
-  },
-  {
-    name: "Tomato Soup",
-    price: 80,
-    category: "Soup",
-    slots: CATEGORY_SLOTS.Soup,
-  },
-  {
-    name: "Veg Spring Roll",
-    price: 120,
-    category: "Starter",
-    slots: CATEGORY_SLOTS.Starter,
-  },
-  {
-    name: "Butter Roti",
-    price: 35,
-    category: "Roti (Bread)",
-    slots: CATEGORY_SLOTS["Roti (Bread)"],
-  },
-  {
-    name: "Paneer Butter Masala",
-    price: 220,
-    category: "Main course",
-    slots: CATEGORY_SLOTS["Main course"],
-  },
-  {
-    name: "Veg Fried Rice",
-    price: 160,
-    category: "Rice n Noodles",
-    slots: CATEGORY_SLOTS["Rice n Noodles"],
-  },
-  {
-    name: "Coca Cola",
-    price: 40,
-    category: "Softdrinks",
-    slots: CATEGORY_SLOTS.Softdrinks,
-  },
-  {
-    name: "Paneer Tikka",
-    price: 260,
-    category: "Grill n spice",
-    slots: CATEGORY_SLOTS["Grill n spice"],
-  },
-];
-
 const CATEGORY_COLORS: Record<string, string> = {
   "Hot n Hot": "text-red-400 border-red-500/30 bg-red-500/10",
   Dosa: "text-orange-400 border-orange-500/30 bg-orange-500/10",
@@ -198,22 +104,16 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Grill n spice": "text-purple-400 border-purple-500/30 bg-purple-500/10",
 };
 
-const CATEGORY_SCHEDULE: Record<string, string> = {
-  "Hot n Hot": "09:00 – 23:00",
-  Dosa: "09:00 – 23:00",
-  Breakfast: "07:00 – 12:00",
-  Chaat: "09:00 – 23:00",
-  "Ice cream novelties": "09:00 – 23:00",
-  "Ice cream cups n packs": "09:00 – 23:00",
-  "Juice n Shakes": "09:00 – 23:00",
-  Soup: "09:00 – 23:00",
-  Starter: "09:00 – 23:00",
-  "Roti (Bread)": "11:30–15:30 & 19:00–22:30",
-  "Main course": "09:00 – 23:00",
-  "Rice n Noodles": "09:00 – 23:00",
-  Softdrinks: "09:00 – 23:00",
-  "Grill n spice": "09:00 – 23:00",
-};
+function getCategoryScheduleLabel(category: string): string {
+  const slots = getCategorySlots()[category];
+  if (!slots || slots.length === 0) return "All day";
+  return slots
+    .map(
+      (s) =>
+        `${String(s.start[0]).padStart(2, "0")}:${String(s.start[1]).padStart(2, "0")}–${String(s.end[0]).padStart(2, "0")}:${String(s.end[1]).padStart(2, "0")}`,
+    )
+    .join(" & ");
+}
 
 function isAvailableNow(item: LocalMenuItem): boolean {
   // Always read from localStorage to respect timing changes made in MenuAdmin
@@ -296,7 +196,7 @@ export function NewOrderModal({
   const allItems: LocalMenuItem[] =
     backendMenuItems && backendMenuItems.length > 0
       ? backendToLocal(backendMenuItems)
-      : ALL_MENU_ITEMS;
+      : [];
 
   // Compute effective license plate
   const effectiveLicensePlate =
@@ -457,6 +357,8 @@ export function NewOrderModal({
       items,
       discount: 0n,
       discountType: "flat",
+      address: "",
+      gstNumber: "",
     };
 
     setIsSubmitting(true);
@@ -704,7 +606,7 @@ export function NewOrderModal({
                       >
                         <span>{cat}</span>
                         <span className="font-normal opacity-75">
-                          {CATEGORY_SCHEDULE[cat]}
+                          {getCategoryScheduleLabel(cat)}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">

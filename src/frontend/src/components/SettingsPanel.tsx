@@ -30,10 +30,12 @@ import {
 } from "@/components/ui/table";
 import { useActor } from "@caffeineai/core-infrastructure";
 import {
+  Building2,
   ChevronLeft,
   FileText,
   Pencil,
   Printer,
+  Receipt,
   Search,
   ShieldCheck,
   Trash2,
@@ -47,6 +49,8 @@ import { InvoiceEditModal } from "./InvoiceEditModal";
 
 const PERMISSIONS_KEY = "dinki_role_permissions";
 const PRINTER_CONFIG_KEY = "dinki_printer_config";
+const ADDRESS_KEY = "dinki_restaurant_address";
+const GST_KEY = "dinki_daily_gst";
 
 const ROLES = [
   "Manager",
@@ -270,12 +274,30 @@ function printInvoice(order: Order) {
       : order.vehicleInfo.licensePlate;
   const discountAmt = Number(order.discount ?? 0n);
   const discountType = order.discountType ?? "flat";
+  const orderId = Number(order.id).toString().padStart(4, "0");
+
+  // Read address & GST from localStorage
+  const restaurantAddress = localStorage.getItem(ADDRESS_KEY) ?? "";
+  const gstNumber = localStorage.getItem(GST_KEY) ?? "";
+  const addressLine = restaurantAddress.trim()
+    ? `<div style="font-size:10px;color:#555;margin-bottom:2px">${restaurantAddress.trim().replace(/\n/g, "<br/>")}</div>`
+    : "";
+  const gstLine = gstNumber.trim()
+    ? `<div style="font-size:10px;color:#555">GSTIN: ${gstNumber.trim()}</div>`
+    : "";
+
   const w = window.open("", "_blank", "width=400,height=600");
   if (!w) return;
   w.document.write(`
-    <html><head><title>Invoice #${Number(order.id).toString().padStart(4, "0")}</title></head>
+    <html><head><title>Invoice #${orderId}</title></head>
     <body style="font-family:monospace;font-size:12px;padding:20px;max-width:300px;margin:0 auto">
-    <div style="text-align:center"><b>DINKI DINE</b><br/>Dine-In &amp; Takeaway<br/>Invoice #${Number(order.id).toString().padStart(4, "0")}</div>
+    <div style="text-align:center">
+      <b>DINKI POS</b><br/>
+      <span style="font-size:11px">Dine-In &amp; Takeaway</span>
+    </div>
+    ${addressLine}
+    ${gstLine}
+    <div style="text-align:center;font-size:11px;margin-top:2px"><b>Invoice #${orderId}</b></div>
     <hr/>
     <div>${locationLabel}: ${locationValue}</div>
     <hr/>
@@ -291,7 +313,7 @@ function printInvoice(order: Order) {
     <div style="display:flex;justify-content:space-between;font-weight:bold"><span>GRAND TOTAL</span><span>\u20B9${grandTotal.toFixed(2)}</span></div>
     <div style="text-align:center;margin-top:10px">
       <p style="font-size:10px">Scan to Pay</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiUrl)}" width="120" height="120"/>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiUrl)}&bgcolor=1a1f2e&color=5eead4" width="120" height="120"/>
       <p style="font-size:9px">Paytm-31587057@ptys</p>
     </div>
     <p style="text-align:center;font-size:10px">Thank you for dining with us!</p>
@@ -327,6 +349,14 @@ export function SettingsPanel({
   const [printers, setPrinters] = useState<PrinterSlot[]>(loadPrinterConfig);
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [editOrder, setEditOrder] = useState<Order | null>(null);
+
+  // Invoice settings state
+  const [restaurantAddress, setRestaurantAddress] = useState(
+    () => localStorage.getItem(ADDRESS_KEY) ?? "",
+  );
+  const [dailyGst, setDailyGst] = useState(
+    () => localStorage.getItem(GST_KEY) ?? "",
+  );
 
   const fulfilledOrders = orders.filter(
     (o) => o.status === OrderStatus.fulfilled,
@@ -444,6 +474,77 @@ export function SettingsPanel({
       </div>
 
       <div className="flex-1 p-4 max-w-4xl mx-auto w-full space-y-8">
+        {/* ── Invoice Settings ── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Receipt className="w-4 h-4 text-din-teal" />
+            <h2 className="text-sm font-bold text-din-text">
+              Invoice Settings
+            </h2>
+            <span className="text-xs text-din-muted ml-1">
+              (printed on every invoice)
+            </span>
+          </div>
+          <div className="bg-din-surface-alt border border-din-border rounded-lg p-4 space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-din-text flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-din-teal" />
+                Restaurant Address
+              </Label>
+              <textarea
+                data-ocid="settings.input"
+                value={restaurantAddress}
+                onChange={(e) => {
+                  setRestaurantAddress(e.target.value);
+                  localStorage.setItem(ADDRESS_KEY, e.target.value);
+                }}
+                placeholder="e.g. 12, Main Street, Chennai - 600001"
+                rows={2}
+                className="w-full text-xs bg-din-surface border border-din-border rounded-md px-3 py-2 text-din-text placeholder:text-din-muted/50 resize-none focus:outline-none focus:border-din-teal/60"
+              />
+              <p className="text-[10px] text-din-muted">
+                Printed at the top of every invoice. Leave empty to omit.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-din-text">
+                Today's GST Number (GSTIN)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  data-ocid="settings.input"
+                  value={dailyGst}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setDailyGst(val);
+                    localStorage.setItem(GST_KEY, val);
+                  }}
+                  placeholder="e.g. 27AABCU9603R1ZX"
+                  className="h-8 text-xs bg-din-surface border-din-border text-din-text uppercase flex-1"
+                />
+                {dailyGst && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDailyGst("");
+                      localStorage.removeItem(GST_KEY);
+                      toast.success("GST number cleared");
+                    }}
+                    className="h-8 text-xs border-din-border text-din-muted hover:bg-din-surface-alt"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <p className="text-[10px] text-din-muted">
+                Updates daily. Printed on invoices. Also pre-fills the GST field
+                in invoice editing.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ── Invoice List & Edit ── */}
         <section>
           <div className="flex items-center gap-2 mb-3">

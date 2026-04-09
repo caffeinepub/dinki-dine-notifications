@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +9,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { Minus, Percent, Plus, Printer, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createActor } from "../backend";
 import type { Order, OrderItem } from "../backend";
 
 const SPECIAL_ITEMS = ["Packing Charges", "Delivery Charge"];
+const GST_KEY = "dinki_daily_gst";
+const ADDRESS_KEY = "dinki_restaurant_address";
 
 function fmt(amount: number): string {
   return `\u20B9${amount.toFixed(2)}`;
@@ -44,6 +49,7 @@ export function InvoiceEditModal({
   onClose,
   onSave,
 }: InvoiceEditModalProps) {
+  const { actor } = useActor(createActor);
   const [items, setItems] = useState<EditableItem[]>([]);
   const [packingCharge, setPackingCharge] = useState<number>(0);
   const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
@@ -53,6 +59,11 @@ export function InvoiceEditModal({
   const [newItemPrice, setNewItemPrice] = useState<number>(0);
   const [newItemQty, setNewItemQty] = useState<number>(1);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Address & GST fields
+  const [address, setAddress] = useState("");
+  const [gstNumber, setGstNumber] = useState("");
+  const [saveGstAsDefault, setSaveGstAsDefault] = useState(false);
 
   useEffect(() => {
     if (!order || !open) return;
@@ -72,12 +83,18 @@ export function InvoiceEditModal({
 
     const disc = Number(order.discount ?? 0n);
     const dtype = order.discountType ?? "flat";
-    if (disc > 0) {
-      setDiscountAmount(disc / 100);
-    } else {
-      setDiscountAmount(0);
-    }
+    setDiscountAmount(disc > 0 ? disc / 100 : 0);
     setDiscountType(dtype === "percent" ? "percent" : "flat");
+
+    // Load address & GST: use order-level if present, else defaults
+    const savedAddress = localStorage.getItem(ADDRESS_KEY) ?? "";
+    const savedGst = localStorage.getItem(GST_KEY) ?? "";
+    setAddress((order as Order & { address?: string }).address ?? savedAddress);
+    setGstNumber(
+      (order as Order & { gstNumber?: string }).gstNumber ?? savedGst,
+    );
+    setSaveGstAsDefault(false);
+
     setNewItemName("");
     setNewItemPrice(0);
     setNewItemQty(1);
@@ -85,6 +102,7 @@ export function InvoiceEditModal({
 
   if (!order) return null;
 
+  const orderId = Number(order.id).toString().padStart(4, "0");
   const itemsTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const sgst = itemsTotal * 0.025;
   const cgst = itemsTotal * 0.025;
@@ -134,6 +152,11 @@ export function InvoiceEditModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Persist GST as default if checked
+      if (saveGstAsDefault && gstNumber.trim()) {
+        localStorage.setItem(GST_KEY, gstNumber.trim());
+      }
+
       const orderItems: OrderItem[] = items.map((i) => ({
         name: i.name,
         price: BigInt(Math.round(i.price)),
@@ -150,6 +173,21 @@ export function InvoiceEditModal({
         storedDiscount,
         discountType,
       );
+
+      // Save address/GST to backend (optional – graceful fallback)
+      if (actor && (address.trim() || gstNumber.trim())) {
+        try {
+          await (
+            actor as unknown as Record<
+              string,
+              (...args: unknown[]) => Promise<void>
+            >
+          ).updateOrderAddressGST?.(order.id, address.trim(), gstNumber.trim());
+        } catch {
+          // Backend method may not exist yet; ignore
+        }
+      }
+
       onClose();
     } finally {
       setIsSaving(false);
@@ -173,10 +211,26 @@ export function InvoiceEditModal({
       : isTakeAway
         ? order.vehicleInfo.licensePlate.replace("TAKEAWAY-", "")
         : order.vehicleInfo.licensePlate;
+
+    const addressLine = address.trim()
+      ? `<div style="font-size:10px;color:#555;margin-bottom:2px">${address.trim().replace(/\n/g, "<br/>")}</div>`
+      : "";
+    const gstLine = gstNumber.trim()
+      ? `<div style="font-size:10px;color:#555">GSTIN: ${gstNumber.trim()}</div>`
+      : "";
+
     w.document.write(`
-      <html><head><title>Invoice #${Number(order.id).toString().padStart(4, "0")}</title></head>
+      <html><head><title>Invoice #${orderId}</title></head>
       <body style="font-family:monospace;font-size:12px;padding:20px;max-width:300px;margin:0 auto">
-      <div style="text-align:center"><b>DINKI DINE</b><br/>Invoice #${Number(order.id).toString().padStart(4, "0")} (REVISED)</div>
+      <div style="text-align:center">
+        <b>DINKI POS</b><br/>
+        <span style="font-size:11px">Dine-In &amp; Takeaway</span>
+      </div>
+      ${addressLine}
+      ${gstLine}
+      <div style="text-align:center;font-size:11px;margin-top:2px">
+        <b>Invoice #${orderId}</b> (REVISED)
+      </div>
       <hr/><div>${locationLabel}: ${locationValue}</div><hr/>
       ${items.map((i) => `<div style="display:flex;justify-content:space-between"><span>${i.name} x${i.quantity}</span><span>${fmt(i.price * i.quantity)}</span></div>`).join("")}
       <hr/>
@@ -207,13 +261,68 @@ export function InvoiceEditModal({
         className="bg-din-surface border-din-border text-din-text max-w-lg w-full"
       >
         <DialogHeader>
-          <DialogTitle className="text-din-text">
-            Edit Invoice #{Number(order.id).toString().padStart(4, "0")}
+          <DialogTitle className="text-din-text flex items-center justify-between">
+            <span>Edit Invoice</span>
+            <span className="text-din-teal font-mono text-sm">
+              Order #{orderId}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-2">
           <div className="space-y-4">
+            {/* Order ID banner */}
+            <div className="bg-din-teal/10 border border-din-teal/30 rounded-lg px-3 py-2 flex items-center justify-between">
+              <span className="text-xs text-din-muted">Order ID</span>
+              <span className="text-sm font-bold font-mono text-din-teal">
+                #{orderId}
+              </span>
+            </div>
+
+            {/* Address field */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-din-text">
+                Address
+              </Label>
+              <textarea
+                data-ocid="invoice_edit.input"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Restaurant address (optional)"
+                rows={2}
+                className="w-full text-xs bg-din-surface-alt border border-din-border rounded-md px-3 py-2 text-din-text placeholder:text-din-muted/50 resize-none focus:outline-none focus:border-din-teal/60"
+              />
+            </div>
+
+            {/* GST Number field */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-din-text">
+                GST No.
+              </Label>
+              <Input
+                data-ocid="invoice_edit.input"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+                placeholder="e.g. 27AABCU9603R1ZX"
+                className="h-7 text-xs bg-din-surface-alt border-din-border text-din-text uppercase"
+              />
+              <div className="flex items-center gap-2 mt-1">
+                <Checkbox
+                  id="save-gst-default"
+                  data-ocid="invoice_edit.toggle"
+                  checked={saveGstAsDefault}
+                  onCheckedChange={(v) => setSaveGstAsDefault(v === true)}
+                  className="border-din-border data-[state=checked]:bg-din-teal data-[state=checked]:border-din-teal"
+                />
+                <label
+                  htmlFor="save-gst-default"
+                  className="text-[11px] text-din-muted cursor-pointer"
+                >
+                  Save as today's default GST number
+                </label>
+              </div>
+            </div>
+
             {/* Items list */}
             <div className="space-y-2">
               <Label className="text-xs font-semibold text-din-text">

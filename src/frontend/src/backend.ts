@@ -115,8 +115,10 @@ export interface OrderInput {
     id: bigint;
     status: OrderStatus;
     vehicleInfo: VehicleInfo;
+    gstNumber: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: Timestamp;
     discount: bigint;
     items: Array<OrderItem>;
@@ -130,9 +132,11 @@ export interface Order {
     id: bigint;
     status: OrderStatus;
     vehicleInfo: VehicleInfo;
+    gstNumber: string;
     cancellationReason: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: Timestamp;
     discount: bigint;
     items: Array<OrderItem>;
@@ -168,6 +172,7 @@ export interface backendInterface {
     placeOrder(order: OrderInput): Promise<bigint>;
     resetMenuToDefaults(): Promise<void>;
     updateMenuItem(id: bigint, name: string, category: string, price: bigint, printerNumber: bigint, available: boolean): Promise<void>;
+    updateOrderAddressGST(orderId: bigint, address: string, gstNumber: string): Promise<boolean>;
     updateOrderDiscount(orderId: bigint, discount: bigint, discountType: string): Promise<void>;
     updateOrderItems(orderId: bigint, items: Array<OrderItem>, packingCharge: bigint, deliveryCharge: bigint): Promise<void>;
     updateOrderStatus(orderId: bigint, status: OrderStatus): Promise<void>;
@@ -497,6 +502,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async updateOrderAddressGST(arg0: bigint, arg1: string, arg2: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateOrderAddressGST(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateOrderAddressGST(arg0, arg1, arg2);
+            return result;
+        }
+    }
     async updateOrderDiscount(arg0: bigint, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
@@ -550,9 +569,11 @@ function from_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint
     id: bigint;
     status: _OrderStatus;
     vehicleInfo: _VehicleInfo;
+    gstNumber: string;
     cancellationReason: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: _Timestamp;
     discount: bigint;
     items: Array<_OrderItem>;
@@ -560,9 +581,11 @@ function from_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint
     id: bigint;
     status: OrderStatus;
     vehicleInfo: VehicleInfo;
+    gstNumber: string;
     cancellationReason: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: Timestamp;
     discount: bigint;
     items: Array<OrderItem>;
@@ -571,9 +594,11 @@ function from_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint
         id: value.id,
         status: from_candid_OrderStatus_n4(_uploadFile, _downloadFile, value.status),
         vehicleInfo: value.vehicleInfo,
+        gstNumber: value.gstNumber,
         cancellationReason: value.cancellationReason,
         discountType: value.discountType,
         customerMobile: value.customerMobile,
+        address: value.address,
         timestamp: value.timestamp,
         discount: value.discount,
         items: value.items
@@ -605,8 +630,10 @@ function to_candid_record_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     id: bigint;
     status: OrderStatus;
     vehicleInfo: VehicleInfo;
+    gstNumber: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: Timestamp;
     discount: bigint;
     items: Array<OrderItem>;
@@ -614,8 +641,10 @@ function to_candid_record_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     id: bigint;
     status: _OrderStatus;
     vehicleInfo: _VehicleInfo;
+    gstNumber: string;
     discountType: string;
     customerMobile: string;
+    address: string;
     timestamp: _Timestamp;
     discount: bigint;
     items: Array<_OrderItem>;
@@ -624,8 +653,10 @@ function to_candid_record_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
         id: value.id,
         status: to_candid_OrderStatus_n8(_uploadFile, _downloadFile, value.status),
         vehicleInfo: value.vehicleInfo,
+        gstNumber: value.gstNumber,
         discountType: value.discountType,
         customerMobile: value.customerMobile,
+        address: value.address,
         timestamp: value.timestamp,
         discount: value.discount,
         items: value.items
